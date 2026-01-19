@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "HELIX",
   "description": "AImagineers' RAG chatbot framework with pluggable pipelines, prompt management, and built-in observability.",
   "company": "AImagineers Software Philippines",
