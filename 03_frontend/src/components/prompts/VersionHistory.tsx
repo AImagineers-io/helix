@@ -2,7 +2,6 @@
  * VersionHistory Component
  *
  * Displays version history sidebar for prompt templates.
- * Pattern adapted from PALAI EditHistory component.
  */
 import { PromptVersion } from '../../services/prompts-api'
 import { VersionItem } from './VersionItem'

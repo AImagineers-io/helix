@@ -1,7 +1,6 @@
 """Default prompt seeding for Helix.
 
 Seeds default prompt templates with initial versions on fresh install.
-Prompts are extracted from PALAI's retrieval_llm.py and adapted for Helix.
 """
 import logging
 from sqlalchemy.orm import Session

@@ -6,14 +6,9 @@ Provides summary statistics for:
 - Cost tracking (current and projected costs by provider)
 
 Architecture Note:
-    This service currently returns zero/mock data as the full PALAI database
-    models (QAPair, Conversation, CostRecord) have not yet been migrated to Helix.
+    This service currently returns zero/mock data as core database
+    models (QAPair, Conversation, CostRecord) have not yet been migrated.
     Once those models are available, this service will be updated to query actual data.
-
-Reference:
-    PALAI patterns from:
-    - backend/api/routers/observability.py (analytics patterns)
-    - backend/api/routers/costs.py (cost tracking)
 """
 from typing import TypedDict
 

@@ -33,7 +33,7 @@ Helix is a retrieval-augmented generation (RAG) chatbot platform that answers qu
 
 ## Status
 
-🟡 **In Development** - Converting from PALAI (PhilRice) to productized platform
+🟢 **v0.4.0** - White-label ready with configurable branding and prompt management
 
 ## License
 

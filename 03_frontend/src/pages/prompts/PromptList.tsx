@@ -2,7 +2,6 @@
  * PromptList Page Component
  *
  * Displays a list of all prompt templates with links to edit each one.
- * Pattern adapted from PALAI QAPairs page.
  */
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
