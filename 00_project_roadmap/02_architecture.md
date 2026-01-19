@@ -1,5 +1,85 @@
 # Helix Architecture
 
+## Source Codebase
+
+Helix is productized from **PALAI** (PhilRice AI Assistant). The source codebase provides a complete, production-ready foundation.
+
+| Attribute | Value |
+|-----------|-------|
+| **Source Path** | `/mnt/d/codes/palai/` |
+| **Origin Client** | PhilRice (Philippine Rice Research Institute) |
+| **Status** | Production (live on Facebook Messenger) |
+
+### What PALAI Already Has
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| FastAPI backend | Complete | `backend/` |
+| React + Vite frontend | Complete | `frontend/` |
+| Chat pipeline (8 processors) | Complete | `backend/services/chat/` |
+| QA pair management | Complete | `backend/database/models.py`, `backend/api/routers/qa_pairs.py` |
+| Semantic search (pgvector) | Complete | `backend/services/retrieval.py` |
+| LLM integration (OpenAI/Anthropic) | Complete | `backend/providers/` |
+| Response caching | Complete | `backend/services/cache/` |
+| Conversation memory | Complete | `backend/services/conversation_memory.py` |
+| Cost tracking | Complete | `backend/services/cost/` |
+| Observability/analytics | Complete | `backend/services/observability/` |
+| Facebook Messenger webhook | Complete | `backend/api/routers/messenger_webhook*.py` |
+| Admin dashboard | Complete | `frontend/src/pages/` |
+| Issue tracking | Complete | `backend/api/routers/issues.py` |
+| Local automations | Complete | `backend/api/routers/local_automation_router.py` |
+
+### What Helix Adds (Delta)
+
+| Component | Status | Phases |
+|-----------|--------|--------|
+| White-label configuration | New | P0 |
+| Prompt management with versioning | New | P1, P2 |
+| Admin dashboard improvements | New | P3 |
+| Rebranding (remove PALAI/PhilRice) | New | P4 |
+| Demo instance + seed data | New | P5 |
+
+### Deployment Model: Single-Tenant Forks
+
+**NOT multi-tenant.** Each client gets their own dedicated instance:
+
+```
+Helix (source repo)
+    ├── Fork → Client A instance (own DB, own server, own config)
+    ├── Fork → Client B instance (own DB, own server, own config)
+    └── Fork → Client C instance (own DB, own server, own config)
+```
+
+- No shared database
+- No tenant_id columns
+- Configuration via environment variables
+- Each instance is completely isolated
+
+### Key PALAI Files to Modify
+
+```
+/mnt/d/codes/palai/
+├── backend/
+│   ├── core/
+│   │   └── config.py              # Centralize all configurable values
+│   ├── database/
+│   │   └── models.py              # Add PromptTemplate, PromptVersion models
+│   ├── api/
+│   │   ├── main.py                # Use config for app name/branding
+│   │   └── routers/prompts.py     # New: Prompt management API
+│   └── services/
+│       └── chat/orchestrator.py   # Load prompts from database
+├── frontend/
+│   ├── src/pages/
+│   │   └── prompts/               # New: Prompt management UI
+│   └── src/providers/
+│       └── ThemeProvider.tsx      # New: Dynamic branding from config
+├── docker-compose.yml             # Rename services to helix-*
+└── .env.example                   # Document all config options
+```
+
+---
+
 ## System Overview
 
 Helix is a RAG (Retrieval-Augmented Generation) chatbot platform built as a monolithic FastAPI application with modular pipeline processors.
@@ -256,56 +336,53 @@ Manages the knowledge base:
 ### Core Entities
 
 ```
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│   Tenant    │──────<│   QAPair    │       │  Embedding  │
-├─────────────┤       ├─────────────┤──────<├─────────────┤
-│ id          │       │ id          │       │ vector[1536]│
-│ name        │       │ tenant_id   │       │ qa_pair_id  │
-│ config      │       │ question    │       └─────────────┘
-│ branding    │       │ answer      │
-└─────────────┘       │ category    │
-      │               │ status      │
-      │               └─────────────┘
-      │
-      │         ┌─────────────────┐       ┌─────────────────┐
-      └────────<│ PromptTemplate  │──────<│ PromptVersion   │
-                ├─────────────────┤       ├─────────────────┤
-                │ id              │       │ id              │
-                │ tenant_id       │       │ template_id     │
-                │ name            │       │ content         │
-                │ description     │       │ version_number  │
-                └─────────────────┘       │ is_active       │
-                                          │ created_at      │
-      │                                   └─────────────────┘
-      │
-      │         ┌─────────────────┐       ┌─────────────────┐
-      └────────<│  Conversation   │──────<│ ObservabilityEvent│
-                ├─────────────────┤       ├─────────────────┤
-                │ id              │       │ id              │
-                │ tenant_id       │       │ conversation_id │
-                │ device_id       │       │ event_type      │
-                │ platform        │       │ payload         │
-                │ created_at      │       │ timestamp       │
-                └─────────────────┘       └─────────────────┘
+┌─────────────┐       ┌─────────────┐
+│   QAPair    │       │  Embedding  │
+├─────────────┤──────<├─────────────┤
+│ id          │       │ vector[1536]│
+│ question    │       │ qa_pair_id  │
+│ answer      │       └─────────────┘
+│ category    │
+│ status      │
+└─────────────┘
+
+┌─────────────────┐       ┌─────────────────┐
+│ PromptTemplate  │──────<│ PromptVersion   │
+├─────────────────┤       ├─────────────────┤
+│ id              │       │ id              │
+│ name            │       │ template_id     │
+│ description     │       │ content         │
+│ type            │       │ version_number  │
+└─────────────────┘       │ is_active       │
+                          │ created_at      │
+                          └─────────────────┘
+
+┌─────────────────┐       ┌─────────────────┐
+│  Conversation   │──────<│ ObservabilityEvent│
+├─────────────────┤       ├─────────────────┤
+│ id              │       │ id              │
+│ device_id       │       │ conversation_id │
+│ platform        │       │ event_type      │
+│ created_at      │       │ payload         │
+└─────────────────┘       │ timestamp       │
+                          └─────────────────┘
 ```
 
 ### Entity Relationships
 
 ```
-Tenant has many QAPairs
-Tenant has many PromptTemplates
-Tenant has many Conversations
-Conversation has many ObservabilityEvents
 QAPair has one Embedding (vector)
 PromptTemplate has many Versions (audit trail)
-CostRecord belongs to Tenant (aggregated by day/month)
+Conversation has many ObservabilityEvents
+CostRecord aggregated by day/month
 ```
 
-### Multi-Tenancy
+### Single-Tenant Architecture
 
-- **Model**: Shared database with `tenant_id` on all tables
-- **Enforcement**: Repository layer filters all queries by `tenant_id`
-- **Isolation**: No cross-tenant data access possible at the data layer
+- **Model**: Each client instance has its own dedicated database
+- **Isolation**: Complete separation - no shared infrastructure
+- **Configuration**: Instance-specific values via environment variables
+- **Deployment**: Fork the repo, configure .env, deploy
 
 ---
 
@@ -373,10 +450,9 @@ CostRecord belongs to Tenant (aggregated by day/month)
 
 | Context | Method | Details |
 |---------|--------|---------|
-| Admin API | API Key | Header: `X-API-Key` |
+| Admin API | API Key | Header: `X-API-Key` (configured per instance) |
 | Chat Users | Device ID | Anonymous, tracked by `device_id` |
 | Messenger Webhook | Signature | Facebook signature validation |
-| Tenant Identification | Header | `X-Tenant-ID` for multi-tenant |
 
 ---
 
@@ -465,7 +541,7 @@ CostRecord belongs to Tenant (aggregated by day/month)
 
 ### Data Protection
 
-- Tenant isolation at repository layer
+- Each client has dedicated database (complete isolation)
 - Soft delete with retention policies
 - Conversation data retention: 30 days default
 
@@ -534,6 +610,140 @@ CostRecord belongs to Tenant (aggregated by day/month)
 3. **Cache**: Redis cluster for high availability
 4. **Queue**: Dedicated job queue (Celery/RQ) for background tasks
 5. **Kubernetes**: Full container orchestration
+
+---
+
+## Testing Architecture
+
+### Test Pyramid
+
+```
+        ┌───────────────┐
+        │     E2E       │  ← Few, slow, high confidence
+        │   (Playwright)│
+        ├───────────────┤
+        │  Integration  │  ← Primary focus, API-level
+        │   (pytest)    │
+        ├───────────────┤
+        │     Unit      │  ← Fast, isolated, many
+        │   (pytest)    │
+        └───────────────┘
+```
+
+| Layer | Scope | Tools | Count Target |
+|-------|-------|-------|--------------|
+| Unit | Single function/class | pytest, mock | Many (100+) |
+| Integration | API endpoints, DB | pytest, httpx, testcontainers | Moderate (50+) |
+| E2E | Full user flows | Playwright | Few (10-20) |
+
+### Directory Structure
+
+```
+backend/
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py              # Shared fixtures (db, client, factories)
+│   ├── integration/
+│   │   ├── __init__.py
+│   │   ├── test_api_endpoints.py
+│   │   ├── test_chat_flow.py
+│   │   ├── test_tenant_isolation.py
+│   │   ├── test_prompt_management.py
+│   │   └── test_qa_management.py
+│   └── unit/
+│       ├── __init__.py
+│       ├── test_pipeline_processors.py
+│       ├── test_services.py
+│       └── test_repositories.py
+│
+frontend/
+├── tests/
+│   ├── components/
+│   │   ├── Dashboard.test.tsx
+│   │   ├── PromptEditor.test.tsx
+│   │   └── ChatWidget.test.tsx
+│   └── e2e/
+│       ├── chat-flow.spec.ts
+│       └── admin-flow.spec.ts
+```
+
+### Fixtures and Factories
+
+```python
+# backend/tests/conftest.py
+
+@pytest.fixture
+def db_session():
+    """Isolated database session per test"""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    yield session
+    session.close()
+
+@pytest.fixture
+def test_qa_pair(db_session):
+    """Create test QA pair"""
+    qa_pair = QAPairFactory.create(question="Test Q", answer="Test A")
+    db_session.add(qa_pair)
+    db_session.commit()
+    return qa_pair
+
+@pytest.fixture
+def client(db_session):
+    """Test client with database session"""
+    app.dependency_overrides[get_db] = lambda: db_session
+    return TestClient(app)
+```
+
+### Database Setup/Teardown
+
+| Strategy | When to Use |
+|----------|-------------|
+| In-memory SQLite | Unit tests, fast integration tests |
+| Testcontainers PostgreSQL | Full integration with pgvector |
+| Transaction rollback | Isolation between tests |
+
+```python
+# Transaction rollback pattern
+@pytest.fixture(autouse=True)
+def rollback(db_session):
+    yield
+    db_session.rollback()
+```
+
+### Testing Tools
+
+| Tool | Purpose |
+|------|---------|
+| **pytest** | Test runner, fixtures |
+| **pytest-cov** | Coverage reporting (target: 80%) |
+| **httpx** | Async test client |
+| **factory_boy** | Test data factories |
+| **Vitest** | Frontend unit tests |
+| **Testing Library** | React component testing |
+| **MSW** | API mocking for frontend |
+| **Playwright** | E2E browser tests |
+
+### Running Tests
+
+```bash
+# All tests
+python helix.py test
+
+# Backend only
+python helix.py test backend
+
+# Frontend only
+python helix.py test frontend
+
+# Specific test types
+python helix.py test unit
+python helix.py test integration
+
+# With coverage
+cd backend && pytest --cov=. --cov-report=html
+```
 
 ---
 
