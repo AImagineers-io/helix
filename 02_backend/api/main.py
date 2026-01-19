@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import get_settings, Settings
-from api.routers import branding, prompts
+from api.routers import branding, prompts, analytics
 
 
 def get_version() -> str:
@@ -66,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Include routers
     app.include_router(branding.router, tags=['Branding'])
     app.include_router(prompts.router)
+    app.include_router(analytics.router)
 
     # Health endpoint
     @app.get('/health', tags=['System'])
