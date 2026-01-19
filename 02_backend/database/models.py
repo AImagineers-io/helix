@@ -3,8 +3,6 @@
 This module defines the database models for prompt management:
 - PromptTemplate: Container for prompt templates with metadata.
 - PromptVersion: Version history for prompt content with activation state.
-
-Models follow the pattern established in PALAI for consistency.
 """
 from datetime import datetime, timezone
 from typing import Optional

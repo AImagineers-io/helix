@@ -2,7 +2,6 @@
  * PromptEditor Page Component
  *
  * Allows editing prompt template content and saves new versions.
- * Pattern adapted from PALAI DevSettings page.
  */
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'

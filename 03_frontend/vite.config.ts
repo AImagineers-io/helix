@@ -25,7 +25,7 @@ export default defineConfig({
     host: '0.0.0.0',
     strictPort: true,
     allowedHosts: [
-      'palai.aimagineers.io',
+      'helix.aimagineers.io',
       'localhost',
       '127.0.0.1',
     ],

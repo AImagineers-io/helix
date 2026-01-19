@@ -83,14 +83,15 @@ def run_command(cmd, cwd=None, timeout=180):
 
 def check_venv():
     """Check if Python virtual environment exists"""
-    backend_venv = Path("backend/venv")
+    # Check both old and new directory structures
+    for backend_dir in [Path("02_backend"), Path("backend")]:
+        backend_venv = backend_dir / "venv"
+        if backend_venv.exists():
+            return str(backend_venv / "bin" / "activate")
 
-    if backend_venv.exists():
-        return str(backend_venv / "bin" / "activate")
-    else:
-        print_error("No Python virtual environment found in backend/!")
-        print_info("Create one with: cd backend && python -m venv venv")
-        return None
+    print_error("No Python virtual environment found!")
+    print_info("Create one with: cd 02_backend && python -m venv venv")
+    return None
 
 
 def run_backend_tests(test_type="all"):
@@ -102,39 +103,29 @@ def run_backend_tests(test_type="all"):
     """
     print_header("Running Backend Tests")
 
-    backend_dir = Path("backend")
-    if not backend_dir.exists():
-        print_error("Backend directory not found!")
-        print_info("Backend tests will be available once the backend is implemented")
-        return 0  # Not a failure, just not implemented yet
-
-    # Check venv
-    venv = check_venv()
-    if not venv:
-        return 1
+    # Check for test directory (04_tests) or legacy backend/tests
+    tests_dir = Path("04_tests")
+    if not tests_dir.exists():
+        tests_dir = Path("backend/tests")
+        if not tests_dir.exists():
+            print_error("Tests directory not found!")
+            print_info("Backend tests will be available once the backend is implemented")
+            return 0  # Not a failure, just not implemented yet
 
     # Determine test path
     if test_type == "unit":
-        test_path = "tests/unit"
+        test_path = "04_tests/unit"
         print_info("Running unit tests only...")
     elif test_type == "integration":
-        test_path = "tests/integration"
+        test_path = "04_tests/integration"
         print_info("Running integration tests only...")
     else:
-        test_path = "tests/"
+        test_path = "04_tests/"
         print_info("Running all backend tests...")
 
     # Run pytest with coverage
-    # Check if pytest-cov is available
-    check_cov = subprocess.run(
-        "bash -c 'cd backend && source venv/bin/activate && pip list | grep pytest-cov'",
-        shell=True,
-        capture_output=True,
-        text=True
-    )
-
-    cov_args = "--cov=. --cov-report=term-missing" if check_cov.returncode == 0 else ""
-    cmd = f"bash -c 'cd backend && source venv/bin/activate && DATABASE_URL=sqlite:///:memory: pytest {test_path} -v {cov_args}'"
+    cov_args = "--cov=02_backend --cov-report=term-missing"
+    cmd = f"DATABASE_URL=sqlite:///:memory: python3 -m pytest {test_path} -v {cov_args}"
 
     exit_code = run_command(cmd, timeout=600)
 
@@ -150,11 +141,14 @@ def run_frontend_tests():
     """Run frontend tests"""
     print_header("Running Frontend Tests")
 
-    frontend_dir = Path("frontend")
+    # Check for 03_frontend or legacy frontend directory
+    frontend_dir = Path("03_frontend")
     if not frontend_dir.exists():
-        print_error("Frontend directory not found!")
-        print_info("Frontend tests will be available once the frontend is implemented")
-        return 0  # Not a failure, just not implemented yet
+        frontend_dir = Path("frontend")
+        if not frontend_dir.exists():
+            print_error("Frontend directory not found!")
+            print_info("Frontend tests will be available once the frontend is implemented")
+            return 0  # Not a failure, just not implemented yet
 
     # Check if node_modules exists
     if not (frontend_dir / "node_modules").exists():
@@ -190,15 +184,15 @@ def run_all_tests():
 
     results = {}
 
-    # Check if backend exists
-    if Path("backend").exists():
+    # Check if backend/tests exist
+    if Path("04_tests").exists() or Path("backend").exists():
         results['backend'] = run_backend_tests()
     else:
         print_info("Backend not yet implemented, skipping...")
         results['backend'] = 0
 
     # Check if frontend exists
-    if Path("frontend").exists():
+    if Path("03_frontend").exists() or Path("frontend").exists():
         results['frontend'] = run_frontend_tests()
     else:
         print_info("Frontend not yet implemented, skipping...")
