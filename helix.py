@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Helix Test CLI - Simple test runner for Helix project
+Helix CLI - Test runner and database seeding tool for Helix project
 
-This CLI tool is designed to run tests locally for troubleshooting and TDD workflows.
+This CLI tool is designed to run tests locally for troubleshooting and TDD workflows,
+and provides database seeding commands for demo and production setup.
 All tests run locally even when the app is deployed to production.
 
 Usage:
@@ -11,6 +12,9 @@ Usage:
     python helix.py test frontend     # Run frontend tests
     python helix.py test unit         # Run backend unit tests only
     python helix.py test integration  # Run backend integration tests only
+    python helix.py seed demo         # Seed database with demo data
+    python helix.py seed prompts      # Seed default prompt templates
+    python helix.py seed reset        # Reset database and reseed with demo data
     python helix.py version           # Show version information
     python helix.py health            # Check backend health
     python helix.py --help            # Show help
@@ -270,13 +274,99 @@ def cmd_health():
         return 1
 
 
+def cmd_seed(seed_type="demo"):
+    """
+    Seed database with demo or default data
+
+    Args:
+        seed_type: Type of seeding - "demo", "prompts", or "reset"
+    """
+    print_header(f"Helix Database Seeding - {seed_type.title()}")
+
+    # Add backend to Python path
+    backend_path = Path("02_backend")
+    if not backend_path.exists():
+        backend_path = Path("backend")
+
+    if not backend_path.exists():
+        print_error("Backend directory not found!")
+        return 1
+
+    # Add to path for imports
+    sys.path.insert(0, str(backend_path))
+
+    try:
+        # Import database dependencies
+        from database.connection import get_db, engine, Base
+        from database.seeds.prompts import seed_default_prompts
+        from database.seeds.demo_prompts import seed_demo_prompts
+        from sqlalchemy.orm import Session
+
+        # Create tables if they don't exist
+        Base.metadata.create_all(bind=engine)
+
+        # Get database session
+        db = next(get_db())
+
+        try:
+            if seed_type == "demo":
+                print_info("Seeding demo data...")
+                seed_demo_prompts(db)
+                print_success("Demo data seeded successfully!")
+
+            elif seed_type == "prompts":
+                print_info("Seeding default prompts...")
+                seed_default_prompts(db)
+                print_success("Default prompts seeded successfully!")
+
+            elif seed_type == "reset":
+                print_info("Resetting database...")
+
+                # Import models to ensure they're registered
+                from database.models import PromptTemplate, PromptVersion
+
+                # Drop all tables
+                Base.metadata.drop_all(bind=engine)
+                print_info("Dropped all tables")
+
+                # Recreate tables
+                Base.metadata.create_all(bind=engine)
+                print_info("Recreated all tables")
+
+                # Reseed with demo data
+                seed_demo_prompts(db)
+                print_success("Database reset and reseeded with demo data!")
+
+            else:
+                print_error(f"Unknown seed type: {seed_type}")
+                print_info("Valid options: demo, prompts, reset")
+                return 1
+
+            print()
+            return 0
+
+        finally:
+            db.close()
+
+    except ImportError as e:
+        print_error(f"Failed to import database modules: {e}")
+        print_info("Make sure backend dependencies are installed")
+        return 1
+    except Exception as e:
+        print_error(f"Seeding failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def show_help():
     """Show help message"""
     help_text = f"""
-{BLUE}Helix Test CLI{NC} - Local test runner for Helix project
+{BLUE}Helix CLI{NC} - Test runner and database seeding tool for Helix project
 
 {YELLOW}Purpose:{NC}
-  This tool runs tests locally for troubleshooting and TDD workflows.
+  This tool runs tests locally for troubleshooting and TDD workflows,
+  and provides database seeding commands for demo and production setup.
   Tests run on your local machine even when the app is deployed to production.
 
 {YELLOW}Usage:{NC}
@@ -285,6 +375,9 @@ def show_help():
   python helix.py test frontend     # Run frontend tests only
   python helix.py test unit         # Run backend unit tests only
   python helix.py test integration  # Run backend integration tests only
+  python helix.py seed demo         # Seed database with demo data
+  python helix.py seed prompts      # Seed default prompt templates
+  python helix.py seed reset        # Reset database and reseed with demo data
   python helix.py version           # Show version information
   python helix.py health            # Check backend health
   python helix.py --help            # Show this help message
@@ -294,6 +387,8 @@ def show_help():
   python helix.py test backend            # Quick backend check
   python helix.py test unit               # Fast unit tests only
   python helix.py test integration        # Integration tests only
+  python helix.py seed demo               # Seed demo data for testing
+  python helix.py seed reset              # Clear and reseed database
   python helix.py version                 # Version info
   python helix.py health                  # Health check
 
@@ -301,12 +396,14 @@ def show_help():
   - Python virtual environment (backend/venv/)
   - Node.js and npm for frontend tests
   - All dependencies installed
+  - DATABASE_URL environment variable for seeding
 
 {YELLOW}Notes:{NC}
   - Tests run locally regardless of deployment environment
   - Use this for TDD and troubleshooting
   - Backend tests use in-memory SQLite (DATABASE_URL=sqlite:///:memory:)
   - Coverage reports included by default
+  - Seed commands modify the actual database (use with caution in production)
   - Exit code 0 = success, 1 = failure (CI/CD compatible)
 """
     print(help_text)
@@ -327,6 +424,16 @@ def main():
         return cmd_version()
     elif command == 'health':
         return cmd_health()
+    elif command == 'seed':
+        # Determine seed type
+        seed_type = args[1] if len(args) > 1 else 'demo'
+
+        if seed_type in ['demo', 'prompts', 'reset']:
+            return cmd_seed(seed_type)
+        else:
+            print_error(f"Unknown seed type: {seed_type}")
+            print_info("Valid options: demo, prompts, reset")
+            return 1
     elif command == 'test':
         # Determine test type
         test_type = args[1] if len(args) > 1 else 'all'
