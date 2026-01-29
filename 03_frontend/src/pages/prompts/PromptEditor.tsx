@@ -5,7 +5,8 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { promptsApi, PromptTemplate } from '../../services/prompts-api'
+import { promptsApi } from '../../services/prompts-api'
+import type { PromptTemplate } from '../../services/prompts-api'
 
 export function PromptEditor() {
   const { id } = useParams<{ id: string }>()

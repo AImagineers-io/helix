@@ -4,6 +4,11 @@
 # Public URLs:
 #   Frontend: https://helix.aimagineers.io
 #   Backend:  https://helix-api.aimagineers.io
+#
+# Port Allocation:
+#   8016: helix-backend (API)
+#   8017: helix-frontend (Web)
+#   6381: helix-redis (Cache)
 
 services:
   redis:
@@ -11,7 +16,7 @@ services:
     container_name: helix-redis
     restart: unless-stopped
     ports:
-      - "6381:6379"  # External 6381, internal 6379
+      - "6381:6379"
     volumes:
       - helix_redis_data:/data
     command: >
@@ -31,20 +36,17 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: 02_backend/Dockerfile
     container_name: helix-backend
     ports:
-      - "8014:8000"  # External 8014, internal 8000
+      - "8016:8000"
     env_file:
       - .env
     environment:
-      # Override defaults from .env for production
       - HOST=0.0.0.0
       - PORT=8000
       - DEBUG=false
       - LOG_LEVEL=INFO
-      - REDIS_URL=redis://redis:6379
-      # Database on db01
       - DATABASE_URL=${DATABASE_URL}
     volumes:
       - helix_backups:/app/backups
@@ -64,14 +66,14 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: 03_frontend/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://helix-api.aimagineers.io}
         VITE_API_KEY: ${VITE_API_KEY}
         VITE_APP_NAME: ${VITE_APP_NAME:-Helix}
     container_name: helix-frontend
     ports:
-      - "8015:3000"  # External 8015, internal 3000
+      - "8017:3000"
     depends_on:
       backend:
         condition: service_healthy

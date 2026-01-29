@@ -3,7 +3,7 @@
  *
  * Displays version history sidebar for prompt templates.
  */
-import { PromptVersion } from '../../services/prompts-api'
+import type { PromptVersion } from '../../services/prompts-api'
 import { VersionItem } from './VersionItem'
 
 interface VersionHistoryProps {
