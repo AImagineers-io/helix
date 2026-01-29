@@ -1,6 +1,8 @@
-# Helix Client Setup Checklist
+# Client Setup Checklist
 
-Step-by-step checklist for deploying a new Helix instance for a client.
+Internal runbook for deploying Helix for a new client.
+
+**Use this checklist** to track progress through the deployment process.
 
 ---
 
@@ -346,23 +348,22 @@ Step-by-step checklist for deploying a new Helix instance for a client.
 
 ---
 
-## Emergency Contacts
+## Escalation Contacts
 
 | Issue | Contact |
 |-------|---------|
-| Server down | DevOps: ops@aimagineers.io |
-| LLM API issues | Platform: support@aimagineers.io |
-| Client requests | Account Manager: [assign] |
-| Bug reports | Development: dev@aimagineers.io |
+| Server/infra | ops@aimagineers.io |
+| Platform/LLM issues | dev@aimagineers.io |
+| Client requests | Account manager (see project docs) |
 
 ---
 
-## Common Issues
+## Troubleshooting
 
 ### Bot not responding
 
 1. Check backend health: `curl https://chat-api.client.com/health`
-2. Check backend logs: `docker-compose logs client-backend`
+2. Check logs: `docker-compose logs client-backend`
 3. Verify OpenAI API key is valid
 4. Check database connection
 
@@ -370,17 +371,16 @@ Step-by-step checklist for deploying a new Helix instance for a client.
 
 1. Verify webhook URL in Facebook App settings
 2. Check `FB_VERIFY_TOKEN` matches
-3. Test webhook manually: `curl https://chat-api.client.com/messenger/webhook`
-4. Review Facebook App logs for errors
+3. Test webhook: `curl https://chat-api.client.com/messenger/webhook`
+4. Review Facebook App logs
 
 ### Low response quality
 
 1. Review prompts for clarity
-2. Check if QA pairs have embeddings (`has_embedding=true`)
-3. Verify retrieval is finding relevant QA pairs
-4. Adjust `retrieval_prompt` to improve context usage
+2. Verify QA pairs have embeddings
+3. Check retrieval is finding relevant QA pairs
+4. Adjust prompts if needed
 
 ---
 
 *Last updated: January 2026*
-*Helix v0.1.0*

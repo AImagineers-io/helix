@@ -1,7 +1,7 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "name": "HELIX",
-  "description": "White-label RAG chatbot platform with configurable branding, prompt management, and analytics.",
+  "description": "AImagineers chatbot deployment framework with configurable branding, prompt management, and analytics.",
   "company": "AImagineers Software Philippines",
   "author": "Mark Beltran",
   "email": "hello@aimagineers.io"

@@ -1,33 +1,36 @@
-# AImagineers Technical Product Brief
+# Helix Technical Brief
+
+Internal technical specification for the Helix chatbot deployment framework.
 
 ---
 
 ## Project Header
 
 | Field | Value |
-| --- | --- |
+|-------|-------|
 | **Product Name** | Helix |
-| **Brief Version** | v0.1 |
-| **Last Updated** | January 18, 2025 |
-| **Author** | Mark / AImagineers |
-| **Status** | 🟡 In Review |
+| **Version** | v0.5 |
+| **Last Updated** | January 2026 |
+| **Author** | AImagineers |
+| **Status** | ✅ Ready |
 
 ---
 
 # 1. Product Context
 
-**Who is this for?**
-Government agencies, research institutions, and enterprises with large knowledge bases who need accurate, multilingual, AI-powered Q&A at scale.
+**What is this?**
+Helix is our internal framework for deploying RAG chatbots for clients. One codebase, configured per client.
 
 **What problem does it solve?**
-Staff overwhelmed with repetitive inquiries, inconsistent answers across channels, and expensive support costs that scale linearly with demand.
+- **For clients**: Scalable Q&A without expensive support staff
+- **For us**: Repeatable deployments, no bespoke development
 
-**What's the shape of the solution?**
-Chatbot + Admin Dashboard + API
+**Shape of solution:**
+Chatbot + Admin Dashboard + API (white-label, single-tenant per client)
 
-**Positioning Statement:**
+**Internal value prop:**
 
-> Helix helps government agencies and research institutions deploy AI-powered Q&A chatbots so they can serve citizens 24/7 in their own language, without expensive call centers or hallucinating answers.
+> Deploy production-ready chatbots in days, not weeks. Fork, configure, ship.
 
 ---
 
@@ -479,8 +482,8 @@ CostRecord belongs to Tenant (aggregated by day/month)
 ## A. Glossary
 
 | Term | Definition |
-| --- | --- |
-| Tenant | A client organization using Helix (e.g., PhilRice) |
+|------|------------|
+| Instance | A client deployment of Helix |
 | QA Pair | A question-answer pair in the knowledge base |
 | Prompt Template | A configurable LLM prompt stored in the database |
 | Pipeline | The sequence of processors that handle a chat message |
@@ -489,22 +492,21 @@ CostRecord belongs to Tenant (aggregated by day/month)
 
 ## B. Reference Links
 
-| Resource | URL |
-| --- | --- |
-| Productization Checklist | (this document, Section 1) |
-| PALAI Codebase | `/mnt/d/codes/palai` |
-| PALAI CLAUDE.md | `/mnt/d/codes/palai/CLAUDE.md` |
+| Resource | Description |
+|----------|-------------|
+| [Deployment Guide](../docs/deployment-guide.md) | How to deploy for a client |
+| [Architecture](../00_project_roadmap/02_architecture.md) | System design |
+| [Development Guidelines](../00_project_roadmap/00_development_guidelines.md) | TDD workflow |
 
 ## C. Decision Log
 
-| Date | Decision | Rationale | Made By |
-| --- | --- | --- | --- |
-| Jan 18, 2025 | Use database-stored prompts, not config files | Enables non-technical editing, A/B testing, per-tenant overrides | Mark |
-| Jan 18, 2025 | Multi-tenant shared DB with tenant_id | Simpler ops than separate DBs, sufficient isolation for target market | Mark |
-| Jan 18, 2025 | Keep V1 webhook for initial clients | Proven stable, V2 can be refined in parallel | Mark |
-| Jan 18, 2025 | Product name: Helix | Domain-agnostic, memorable, available | Mark |
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| Jan 2025 | Database-stored prompts | Enables admin editing, versioning, A/B testing |
+| Jan 2025 | Single-tenant per client | Complete isolation, simpler security model |
+| Jan 2025 | Product name: Helix | Domain-agnostic, memorable |
+| Jan 2026 | Productized from PALAI | Proven architecture, now repeatable |
 
 ---
 
-*Framework version: 1.0*
-*Template by AImagineers*
+*Last updated: January 2026*

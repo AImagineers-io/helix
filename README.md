@@ -1,27 +1,29 @@
 # Helix
 
-**White-label RAG Chatbot Platform**
+**AImagineers Chatbot Deployment Framework**
 
-Helix helps government agencies and research institutions deploy AI-powered Q&A chatbots so they can serve citizens 24/7 in their own language, without expensive call centers or hallucinating answers.
+Helix is our internal platform for deploying production-ready RAG chatbots for clients. It standardizes how we build, configure, and ship knowledge-base chatbots — reducing deployment time from weeks to days.
 
 ---
 
 ## What is Helix?
 
-Helix is a retrieval-augmented generation (RAG) chatbot platform that answers questions from your curated knowledge base. Unlike general-purpose AI assistants, Helix grounds all responses in YOUR approved content, eliminating hallucinations and ensuring accurate, compliant answers.
+Helix is a retrieval-augmented generation (RAG) chatbot framework that we use to deploy chatbots for clients across any industry. Each deployment is white-labeled, isolated, and configured entirely through environment variables — no code changes needed per client.
 
-### Key Features
+**Origin**: Productized from PALAI (PhilRice deployment). That project proved the architecture; Helix makes it repeatable.
 
-- **RAG-Powered Q&A** - Answers questions strictly from your knowledge base
-- **Multi-language Support** - Detects user language, processes in English, responds in original language
+### Core Capabilities
+
+- **RAG Pipeline** - Answers grounded in client's knowledge base, no hallucinations
+- **Multi-language** - Auto-detects language, responds in user's language
 - **Multi-channel** - Web widget, Facebook Messenger, REST API
-- **Admin Dashboard** - QA management, prompt editing, analytics, conversation review
-- **Cost Tracking** - Built-in budget alerts and usage monitoring
-- **White-label** - Fully customizable branding per client
+- **Admin Dashboard** - QA management, prompt editing, analytics
+- **Cost Tracking** - Built-in usage monitoring and budget alerts
+- **White-label Ready** - Branding configured via environment variables
 
 ---
 
-## Quick Start
+## Quick Start (Local Development)
 
 ### 1. Clone Repository
 
@@ -34,15 +36,15 @@ cd helix
 
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with client-specific values
 ```
 
 Required environment variables:
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5432/helix_db
 OPENAI_API_KEY=sk-your-openai-key
-APP_NAME=Your Company AI
-BOT_NAME=YourBot
+APP_NAME=ClientName Assistant    # Client's branded name
+BOT_NAME=ClientBot               # Chatbot persona name
 ```
 
 ### 3. Run with Docker Compose
@@ -93,17 +95,17 @@ python helix.py seed prompts
 
 ## Configuration
 
-### Branding (White-label)
+### Client Branding
 
-Customize your instance via environment variables:
+Each deployment is configured via environment variables. No code changes needed:
 
 ```bash
-# Application branding
-APP_NAME=Your Company AI Assistant
-APP_DESCRIPTION=AI-powered Q&A for your organization
-BOT_NAME=YourBot
-LOGO_URL=https://your-domain.com/logo.png
-PRIMARY_COLOR=#3B82F6
+# Client branding (change per deployment)
+APP_NAME=Acme Support Bot
+APP_DESCRIPTION=AI assistant for Acme Corp
+BOT_NAME=Ada
+LOGO_URL=https://acme.com/logo.png
+PRIMARY_COLOR=#1E40AF
 
 # Feature flags
 ENABLE_MESSENGER=true
@@ -279,11 +281,11 @@ See [Development Guidelines](00_project_roadmap/00_development_guidelines.md) fo
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Guide](docs/deployment-guide.md) | Complete production deployment guide |
-| [Client Setup Checklist](docs/client-setup-checklist.md) | Step-by-step client onboarding |
+| [Deployment Guide](docs/deployment-guide.md) | How to deploy for a new client |
+| [Client Setup Checklist](docs/client-setup-checklist.md) | Step-by-step deployment checklist |
 | [Architecture Overview](00_project_roadmap/02_architecture.md) | System design and patterns |
 | [Development Guidelines](00_project_roadmap/00_development_guidelines.md) | TDD workflow and standards |
-| [Technical Product Brief](01_documentation/helix-technical-product-brief.md) | Complete technical specs |
+| [Technical Brief](01_documentation/helix-technical-product-brief.md) | Technical specifications |
 
 ---
 
@@ -341,17 +343,11 @@ See full API documentation at `/docs` endpoint when backend is running.
 
 ---
 
-## Support
+## Team Resources
 
-### Issues and Questions
-
-- **GitHub Issues**: https://github.com/aimagineers/helix/issues
+- **Issues**: https://github.com/aimagineers/helix/issues
 - **Documentation**: [docs/](docs/)
-- **Email**: support@aimagineers.io
-
-### Contributing
-
-This is a proprietary product developed by AImagineers. For collaboration inquiries, contact: dev@aimagineers.io
+- **Questions**: dev@aimagineers.io
 
 ---
 
@@ -361,8 +357,6 @@ This is a proprietary product developed by AImagineers. For collaboration inquir
 
 Copyright © 2026 AImagineers. All rights reserved.
 
-This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
-
 ---
 
 ## Version
@@ -370,7 +364,3 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 **v0.5.0** - Demo and Documentation Release
 
 See [version.json](version.json) for detailed version information.
-
----
-
-*Built with ❤️ by AImagineers*

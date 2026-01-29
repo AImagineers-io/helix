@@ -1,58 +1,58 @@
 # Helix Overview
 
-## Product Summary
+## What is Helix?
 
-**Helix** is a white-label RAG (Retrieval-Augmented Generation) chatbot platform designed for government agencies, research institutions, and enterprises with large knowledge bases.
+**Helix** is AImagineers' internal framework for deploying RAG (Retrieval-Augmented Generation) chatbots for clients. It standardizes our deployment process so we can ship production-ready chatbots in days, not weeks.
 
-> Helix helps government agencies and research institutions deploy AI-powered Q&A chatbots so they can serve citizens 24/7 in their own language, without expensive call centers or hallucinating answers.
+> Helix lets us deploy white-label chatbots for any client with a knowledge base — configured via environment variables, no code changes per deployment.
 
 ---
 
-## Problem Statement
+## Why We Built This
 
-### Who Has This Problem?
+### The Problem We Solve for Clients
 
-Organizations with large knowledge bases who need to provide accurate, multilingual, AI-powered Q&A at scale without breaking the budget:
-
-- Government citizen service centers (SSS, PhilHealth, Pag-IBIG)
-- Agricultural extension services (PhilRice)
-- Regional research institutes (Vietnam CLRRI, Thai Rice Department)
-- Enterprise support centers
-
-### The Pain
+Organizations with knowledge bases need accurate, scalable Q&A. Their pain points:
 
 - Staff overwhelmed with repetitive inquiries
 - Inconsistent answers across channels
-- Citizens/customers churning or giving up
-- Expensive call center costs that scale linearly with demand
+- Expensive support costs that scale linearly with demand
+
+### The Problem We Solve for Ourselves
+
+Before Helix, each chatbot deployment was bespoke. Now:
+
+- **Repeatable**: Same codebase, different config
+- **Fast**: Days to deploy, not weeks
+- **Maintainable**: One codebase to update, all deployments benefit
 
 ---
 
-## Solution
+## Core Capabilities
 
-### What Helix Does
+### What We Deliver to Clients
 
 | Feature | Description |
 |---------|-------------|
-| **RAG Chatbot** | Answers questions from your curated knowledge base |
-| **Multi-language** | Detects language, processes in English, responds in user's language |
+| **RAG Chatbot** | Answers grounded in client's knowledge base |
+| **Multi-language** | Auto-detects language, responds in user's language |
 | **Multi-channel** | Web widget, Facebook Messenger, REST API |
-| **Admin Dashboard** | QA management, prompt editing, analytics, issue triage |
-| **Cost Tracking** | Built-in budget alerts and usage monitoring |
-| **White-label** | Customizable branding per client |
+| **Admin Dashboard** | QA management, prompt editing, analytics |
+| **Cost Tracking** | Usage monitoring and budget alerts |
+| **White-label** | Client branding via config, no code changes |
 
-### What Helix Does NOT Do
+### Scope Boundaries
 
-- **Not a general-purpose LLM** - Answers are grounded in YOUR data only (no hallucination)
-- **Not a live chat replacement** - Human handoff supported but humans manage separately
-- **Not a content authoring tool** - You bring the QA pairs, Helix serves them
-- **Not multi-tenant SaaS** - Each client gets their own dedicated deployment
+- **Not a general-purpose LLM** - Answers grounded in knowledge base only
+- **Not a live chat replacement** - Human handoff supported, but separate tooling
+- **Not a content authoring tool** - Client provides QA pairs, we serve them
+- **Not multi-tenant** - Each client gets isolated deployment
 
 ---
 
 ## Deployment Model
 
-**Single-tenant, white-label deployments:**
+**One instance per client, completely isolated:**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -66,46 +66,43 @@ Organizations with large knowledge bases who need to provide accurate, multiling
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-Each deployment is isolated, customized, and managed independently.
+Fork the repo, configure `.env`, deploy. Each instance is independent.
 
 ---
 
-## Deliverables
+## What We Ship Per Client
 
-### Core Deliverables
+### Standard Deliverables
 
-| Deliverable | Status |
-|-------------|--------|
-| Dedicated Helix instance (Docker deployment) | Core |
-| Chat widget (embeddable web + standalone) | Core |
-| Facebook Messenger integration | Core |
-| Admin dashboard (QA management, prompts, analytics) | Core |
-| REST API for custom integrations | Core |
-| QA import tools (CSV, JSON, text) | Core |
-| Observability & cost monitoring dashboard | Core |
-| White-label branding (logo, colors, bot name) | Core |
+| Deliverable | Description |
+|-------------|-------------|
+| Helix instance | Docker deployment on our infra or client's |
+| Chat widget | Embeddable web widget + standalone page |
+| Messenger integration | Facebook Messenger webhook (if needed) |
+| Admin dashboard | QA management, prompts, analytics |
+| REST API | For custom integrations |
+| QA import tools | CSV, JSON, text import |
+| Cost monitoring | Usage tracking and alerts |
 
-### Future / Add-on
+### Optional Add-ons
 
-| Deliverable | Status |
-|-------------|--------|
-| WhatsApp integration | Add-on |
-| LINE integration | Add-on |
-| Viber integration | Add-on |
-| Custom LLM fine-tuning | Not planned |
-| On-premise deployment | Enterprise only |
+| Add-on | Notes |
+|--------|-------|
+| WhatsApp integration | Additional setup |
+| LINE/Viber integration | Additional setup |
+| On-premise deployment | Enterprise engagements only |
 
 ---
 
-## Success Metrics
+## Success Metrics (Client-Facing)
 
-### Timeline Milestones
+What we promise clients:
 
 | Milestone | Target |
 |-----------|--------|
-| **30 days** | Chatbot live with 500+ QA pairs, handling first real user queries |
-| **60 days** | 70%+ of inquiries resolved without human intervention |
-| **90 days** | Measurable reduction in repetitive support tickets, cost per query < $0.01 |
+| **30 days** | Chatbot live with 500+ QA pairs |
+| **60 days** | 70%+ inquiry deflection |
+| **90 days** | Cost per query < $0.01 |
 
 ### Performance Targets
 
@@ -118,20 +115,19 @@ Each deployment is isolated, customized, and managed independently.
 
 ---
 
-## Prerequisites
+## Client Requirements
 
-### What Clients Need to Provide
+### What We Need From Clients
 
-1. **QA Pairs** - Structured format (CSV/Excel), minimum 200 pairs recommended
-2. **Facebook Page Access** - If Messenger deployment needed
-3. **Brand Assets** - Logo, colors, bot name for white-labeling
-4. **Subject Matter Expert** - 2-4 hours/week during onboarding for QA review
+1. **QA Pairs** - CSV/Excel format, minimum 200 pairs recommended
+2. **Facebook Page Access** - If Messenger integration needed
+3. **Brand Assets** - Logo, colors, bot name
+4. **SME Availability** - 2-4 hours/week during onboarding for QA review
 
-### Technical Requirements
+### Client Budget
 
-- Approved knowledge base content
-- Decision maker available for weekly check-ins
-- Budget for LLM API costs (~$10-30/month depending on volume)
+- LLM API costs: ~$10-30/month depending on volume
+- Hosting: Included in retainer or client provides infrastructure
 
 ---
 
@@ -172,15 +168,9 @@ Each deployment is isolated, customized, and managed independently.
 
 ---
 
-## Project Origin
+## Origin
 
-Helix is productized from **PALAI**, a successful deployment for PhilRice (Philippine Rice Research Institute). The conversion involves:
-
-- Removing client-specific branding and data
-- Abstracting client-specific values to configuration
-- Adding multi-tenant support
-- Creating provisioning and deployment documentation
-- Building demo capabilities
+Helix was productized from **PALAI** (our PhilRice deployment). That engagement proved the architecture works; Helix makes it repeatable for any client.
 
 ---
 
@@ -188,16 +178,14 @@ Helix is productized from **PALAI**, a successful deployment for PhilRice (Phili
 
 | Area | Status |
 |------|--------|
-| Problem Clarity | Complete |
-| Solution Boundaries | Complete |
-| Deliverable Clarity | In Progress (need demo assets) |
-| Outcome Definition | Complete |
-| Commercials | Complete |
-| Prerequisites | Complete |
-| Technical Abstraction | In Progress |
+| Core Framework | Complete (P0-P5) |
+| Prompt Management | Complete |
+| Admin Dashboard | Complete |
+| White-label Config | Complete |
+| Demo Instance | Complete |
 | Documentation | In Progress |
 
-**Overall: In Development**
+**Overall: Ready for client deployments**
 
 ---
 
@@ -205,12 +193,11 @@ Helix is productized from **PALAI**, a successful deployment for PhilRice (Phili
 
 | Document | Description |
 |----------|-------------|
-| [Development Guidelines](00_development_guidelines.md) | TDD workflow, testing standards, code quality |
-| [Architecture](02_architecture.md) | System design, data model, API surface |
-| [Productization Framework](../01_documentation/helix-productization-framework.md) | Full product readiness checklist |
-| [Technical Product Brief](../01_documentation/helix-technical-product-brief.md) | Detailed technical specifications |
+| [Development Guidelines](00_development_guidelines.md) | TDD workflow and standards |
+| [Architecture](02_architecture.md) | System design and patterns |
+| [Deployment Guide](../docs/deployment-guide.md) | How to deploy for a client |
+| [Technical Brief](../01_documentation/helix-technical-product-brief.md) | Technical specifications |
 
 ---
 
-*Last updated: January 2025*
-*Helix v0.1.0*
+*Last updated: January 2026*
