@@ -1,10 +1,10 @@
 # Instance Configuration Guide
 
-This guide explains how to configure a new Helix instance for a client deployment.
+How to configure a Helix instance for a client.
 
 ## Overview
 
-Helix uses environment variables for all client-specific configuration, enabling white-label deployment without code changes. Each client gets their own dedicated instance with customized branding and features.
+All client-specific configuration is done via environment variables. No code changes needed per client. Fork, configure `.env`, deploy.
 
 ## Quick Start
 

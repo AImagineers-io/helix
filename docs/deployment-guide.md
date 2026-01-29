@@ -1,12 +1,14 @@
 # Helix Deployment Guide
 
-Complete guide for deploying a new Helix instance using Docker Compose.
+How to deploy a Helix instance for a new client.
+
+**Audience**: AImagineers team deploying for clients.
 
 ---
 
 ## Prerequisites
 
-Before deploying Helix, ensure you have:
+Before starting deployment, ensure you have:
 
 - [x] Docker and Docker Compose installed
 - [x] PostgreSQL database server (or use Docker Compose for local DB)
@@ -54,12 +56,12 @@ Helix consists of three main services:
 ## Step 1: Fork and Clone Repository
 
 ```bash
-# Fork the repository on GitHub/GitLab first, then clone your fork
-git clone https://github.com/YOUR_ORG/helix.git
+# Clone the Helix repo (or fork to client's org if they want their own copy)
+git clone https://github.com/aimagineers/helix.git
 cd helix
 
-# Create a new branch for your deployment config
-git checkout -b deploy/your-client-name
+# Create a branch for this client's deployment
+git checkout -b deploy/client-name
 ```
 
 ---
@@ -536,15 +538,11 @@ Before going live:
 
 ---
 
-## Support
+## Help
 
-For issues or questions:
-
-- GitHub Issues: https://github.com/your-org/helix/issues
-- Documentation: https://github.com/your-org/helix/docs
-- Email: support@your-domain.com
+- **Issues**: https://github.com/aimagineers/helix/issues
+- **Questions**: dev@aimagineers.io
 
 ---
 
 *Last updated: January 2026*
-*Helix v0.1.0*

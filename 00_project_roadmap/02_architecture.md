@@ -1,82 +1,43 @@
 # Helix Architecture
 
-## Source Codebase
+## Overview
 
-Helix is productized from **PALAI** (PhilRice AI Assistant). The source codebase provides a complete, production-ready foundation.
+Helix is our standardized RAG chatbot framework. Each client deployment is a configured instance of this codebase.
 
-| Attribute | Value |
-|-----------|-------|
-| **Source Path** | `/mnt/d/codes/palai/` |
-| **Origin Client** | PhilRice (Philippine Rice Research Institute) |
-| **Status** | Production (live on Facebook Messenger) |
+**Origin**: Productized from PALAI (our PhilRice deployment). The architecture was proven there; Helix makes it repeatable.
 
-### What PALAI Already Has
+## Deployment Model
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| FastAPI backend | Complete | `backend/` |
-| React + Vite frontend | Complete | `frontend/` |
-| Chat pipeline (8 processors) | Complete | `backend/services/chat/` |
-| QA pair management | Complete | `backend/database/models.py`, `backend/api/routers/qa_pairs.py` |
-| Semantic search (pgvector) | Complete | `backend/services/retrieval.py` |
-| LLM integration (OpenAI/Anthropic) | Complete | `backend/providers/` |
-| Response caching | Complete | `backend/services/cache/` |
-| Conversation memory | Complete | `backend/services/conversation_memory.py` |
-| Cost tracking | Complete | `backend/services/cost/` |
-| Observability/analytics | Complete | `backend/services/observability/` |
-| Facebook Messenger webhook | Complete | `backend/api/routers/messenger_webhook*.py` |
-| Admin dashboard | Complete | `frontend/src/pages/` |
-| Issue tracking | Complete | `backend/api/routers/issues.py` |
-| Local automations | Complete | `backend/api/routers/local_automation_router.py` |
-
-### What Helix Adds (Delta)
-
-| Component | Status | Phases |
-|-----------|--------|--------|
-| White-label configuration | New | P0 |
-| Prompt management with versioning | New | P1, P2 |
-| Admin dashboard improvements | New | P3 |
-| Rebranding (remove PALAI/PhilRice) | New | P4 |
-| Demo instance + seed data | New | P5 |
-
-### Deployment Model: Single-Tenant Forks
-
-**NOT multi-tenant.** Each client gets their own dedicated instance:
+**One instance per client, fully isolated:**
 
 ```
 Helix (source repo)
-    ├── Fork → Client A instance (own DB, own server, own config)
-    ├── Fork → Client B instance (own DB, own server, own config)
-    └── Fork → Client C instance (own DB, own server, own config)
+    ├── Fork → Client A instance (own DB, own config)
+    ├── Fork → Client B instance (own DB, own config)
+    └── Fork → Client C instance (own DB, own config)
 ```
 
 - No shared database
 - No tenant_id columns
 - Configuration via environment variables
-- Each instance is completely isolated
+- Each instance completely isolated
 
-### Key PALAI Files to Modify
+## What Helix Provides
 
-```
-/mnt/d/codes/palai/
-├── backend/
-│   ├── core/
-│   │   └── config.py              # Centralize all configurable values
-│   ├── database/
-│   │   └── models.py              # Add PromptTemplate, PromptVersion models
-│   ├── api/
-│   │   ├── main.py                # Use config for app name/branding
-│   │   └── routers/prompts.py     # New: Prompt management API
-│   └── services/
-│       └── chat/orchestrator.py   # Load prompts from database
-├── frontend/
-│   ├── src/pages/
-│   │   └── prompts/               # New: Prompt management UI
-│   └── src/providers/
-│       └── ThemeProvider.tsx      # New: Dynamic branding from config
-├── docker-compose.yml             # Rename services to helix-*
-└── .env.example                   # Document all config options
-```
+| Component | Description |
+|-----------|-------------|
+| FastAPI backend | Async API, auto-generated docs |
+| React + Vite frontend | Admin dashboard |
+| Chat pipeline | 8 processors (language, moderation, RAG, LLM, etc.) |
+| QA pair management | CRUD, import, embedding generation |
+| Semantic search | pgvector for RAG retrieval |
+| LLM integration | OpenAI primary, Anthropic fallback |
+| Response caching | Redis-based |
+| Conversation memory | Context window management |
+| Cost tracking | Per-request, daily aggregates |
+| Facebook Messenger | Webhook integration |
+| Prompt management | Versioned, editable via admin UI |
+| White-label config | Environment-driven branding |
 
 ---
 
@@ -751,11 +712,10 @@ cd backend && pytest --cov=. --cov-report=html
 
 | Document | Description |
 |----------|-------------|
-| [Development Guidelines](00_development_guidelines.md) | TDD workflow, testing standards |
-| [Overview](01_overview.md) | Product summary, features, success metrics |
-| [Technical Product Brief](../01_documentation/helix-technical-product-brief.md) | Full technical specifications |
+| [Development Guidelines](00_development_guidelines.md) | TDD workflow and standards |
+| [Overview](01_overview.md) | What Helix is and why we built it |
+| [Deployment Guide](../docs/deployment-guide.md) | How to deploy for a client |
 
 ---
 
-*Last updated: January 2025*
-*Helix v0.1.0*
+*Last updated: January 2026*
