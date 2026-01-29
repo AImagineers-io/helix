@@ -1,0 +1,62 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  only:
+    - main
+  script:
+    - echo "🚀 Deploying Helix to apps01..."
+
+    # Create .env file locally
+    - echo "# Helix Production Environment" > "$CI_PROJECT_DIR/.env"
+    - echo "HOST=0.0.0.0" >> "$CI_PROJECT_DIR/.env"
+    - echo "PORT=8000" >> "$CI_PROJECT_DIR/.env"
+    - echo "DEBUG=false" >> "$CI_PROJECT_DIR/.env"
+    - echo "LOG_LEVEL=INFO" >> "$CI_PROJECT_DIR/.env"
+
+    # Database
+    - echo "DATABASE_URL=$DATABASE_URL" >> "$CI_PROJECT_DIR/.env"
+
+    # Branding (required)
+    - echo "APP_NAME=$APP_NAME" >> "$CI_PROJECT_DIR/.env"
+    - echo "BOT_NAME=$BOT_NAME" >> "$CI_PROJECT_DIR/.env"
+    - echo "APP_DESCRIPTION=$APP_DESCRIPTION" >> "$CI_PROJECT_DIR/.env"
+    - echo "PRIMARY_COLOR=$PRIMARY_COLOR" >> "$CI_PROJECT_DIR/.env"
+
+    # API Security
+    - echo "API_KEY=$API_KEY" >> "$CI_PROJECT_DIR/.env"
+
+    # CORS
+    - echo "CORS_ORIGINS=$CORS_ORIGINS" >> "$CI_PROJECT_DIR/.env"
+
+    # Frontend build args
+    - echo "VITE_API_URL=$VITE_API_URL" >> "$CI_PROJECT_DIR/.env"
+    - echo "VITE_API_KEY=$API_KEY" >> "$CI_PROJECT_DIR/.env"
+    - echo "VITE_APP_NAME=$APP_NAME" >> "$CI_PROJECT_DIR/.env"
+
+    # Sync code to server
+    - rsync -avz --delete
+        --exclude '.git/'
+        --exclude '.gitlab-ci.yml'
+        --exclude 'node_modules/'
+        --exclude '__pycache__/'
+        --exclude '*.pyc'
+        --exclude '.DS_Store'
+        --exclude 'dist/'
+        --exclude '.venv/'
+        --exclude 'coverage/'
+        "$CI_PROJECT_DIR/" apps01:/home/apps01/helix/
+
+    # SSH to server and deploy with Docker Compose
+    - ssh apps01 "
+       cd /home/apps01/helix &&
+       docker compose down &&
+       echo '🧹 Cleaning up old Docker resources...' &&
+       docker system prune -f --filter 'until=24h' &&
+       docker builder prune -f --filter 'until=24h' &&
+       docker compose build --no-cache frontend &&
+       docker compose build backend &&
+       docker compose up -d &&
+       docker compose ps
+      "

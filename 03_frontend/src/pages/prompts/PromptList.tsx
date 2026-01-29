@@ -5,7 +5,8 @@
  */
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { promptsApi, PromptTemplateListItem } from '../../services/prompts-api'
+import { promptsApi } from '../../services/prompts-api'
+import type { PromptTemplateListItem } from '../../services/prompts-api'
 
 export function PromptList() {
   const [prompts, setPrompts] = useState<PromptTemplateListItem[]>([])

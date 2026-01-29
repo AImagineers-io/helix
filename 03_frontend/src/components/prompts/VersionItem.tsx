@@ -3,7 +3,7 @@
  *
  * Displays a single version entry in the version history timeline.
  */
-import { PromptVersion } from '../../services/prompts-api'
+import type { PromptVersion } from '../../services/prompts-api'
 
 interface VersionItemProps {
   /** Version data to display */
