@@ -10,7 +10,7 @@ from typing import Optional
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean,
-    ForeignKey, Index, TypeDecorator, JSON,
+    ForeignKey, Index, TypeDecorator, JSON, Date, Numeric,
 )
 from sqlalchemy.orm import relationship
 
@@ -182,4 +182,40 @@ class PromptAuditLog(Base):
         return (
             f"<PromptAuditLog(id={self.id}, template_id={self.template_id}, "
             f"action={self.action})>"
+        )
+
+
+class DailyAggregate(Base):
+    """Pre-computed daily analytics aggregates.
+
+    Stores aggregated metrics per day for efficient analytics queries.
+    Computed via scheduled job rather than on-demand calculation.
+
+    Attributes:
+        id: Primary key.
+        date: The date this aggregate represents (unique).
+        conversation_count: Number of conversations that day.
+        message_count: Number of messages exchanged.
+        avg_response_time_ms: Average response time in milliseconds.
+        cost_total: Total cost incurred that day.
+        created_at: When this aggregate was computed.
+        updated_at: When this aggregate was last updated.
+    """
+
+    __tablename__ = "daily_aggregates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, unique=True, nullable=False, index=True)
+    conversation_count = Column(Integer, default=0, nullable=False)
+    message_count = Column(Integer, default=0, nullable=False)
+    avg_response_time_ms = Column(Integer, nullable=True)
+    cost_total = Column(Numeric(10, 2), default=0, nullable=False)
+
+    created_at = Column(TZDateTime, default=utc_now, nullable=False)
+    updated_at = Column(TZDateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<DailyAggregate(id={self.id}, date={self.date}, "
+            f"conversations={self.conversation_count}, cost={self.cost_total})>"
         )

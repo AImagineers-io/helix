@@ -14,6 +14,7 @@ class QAStats(BaseModel):
 class ConversationStats(BaseModel):
     """Conversation count statistics."""
 
+    total: int
     today: int
     this_week: int
     this_month: int
