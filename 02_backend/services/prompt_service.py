@@ -4,14 +4,23 @@ Provides business logic for managing prompt templates and versions:
 - CRUD operations for templates
 - Version management (create, activate, rollback)
 - Content retrieval for active prompts
+- Cache-aware operations
+- Fallback behavior for missing prompts
 """
+import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from database.models import PromptTemplate, PromptVersion
+from core.constants import PromptType, DEFAULT_PROMPTS
+
+if TYPE_CHECKING:
+    from services.prompt_cache import PromptCacheService
+
+logger = logging.getLogger(__name__)
 
 
 class PromptNotFoundError(Exception):
@@ -21,6 +30,11 @@ class PromptNotFoundError(Exception):
 
 class VersionNotFoundError(Exception):
     """Raised when a prompt version is not found."""
+    pass
+
+
+class VersionConflictError(Exception):
+    """Raised when optimistic locking detects a version conflict."""
     pass
 
 
@@ -158,18 +172,20 @@ class PromptService:
     def update_template(
         self,
         template_id: int,
+        edit_version: int,
         content: Optional[str] = None,
         description: Optional[str] = None,
         created_by: Optional[str] = None,
         change_notes: Optional[str] = None,
     ) -> PromptTemplate:
-        """Update a template's content or metadata.
+        """Update a template's content or metadata with optimistic locking.
 
         If content is provided, creates a new version.
         If only metadata is provided, updates template without new version.
 
         Args:
             template_id: Template ID to update.
+            edit_version: Current edit_version for optimistic locking.
             content: Optional new prompt content (creates new version).
             description: Optional new description.
             created_by: Optional updater identifier.
@@ -180,8 +196,17 @@ class PromptService:
 
         Raises:
             PromptNotFoundError: If template not found.
+            VersionConflictError: If edit_version doesn't match current version.
         """
         template = self.get_template(template_id)
+
+        # Check optimistic locking version
+        if template.edit_version != edit_version:
+            raise VersionConflictError(
+                f"Version conflict: expected version {edit_version}, "
+                f"but current version is {template.edit_version}. "
+                "Another user may have modified this template."
+            )
 
         # Update metadata if provided
         if description is not None:
@@ -210,6 +235,9 @@ class PromptService:
             )
             self.db.add(new_version)
             template.updated_at = datetime.now(timezone.utc)
+
+        # Increment edit_version for optimistic locking
+        template.edit_version += 1
 
         self.db.commit()
         self.db.refresh(template)
@@ -349,3 +377,145 @@ class PromptService:
         previous_version_number = active.version_number - 1
 
         return self.publish_version(template_id, previous_version_number)
+
+    def preview(
+        self,
+        template_id: int,
+        context: dict[str, str],
+        version_number: Optional[int] = None,
+    ) -> dict:
+        """Preview a prompt with variables substituted.
+
+        Args:
+            template_id: Template ID.
+            context: Dictionary of variable names to values.
+            version_number: Optional specific version to preview.
+                           Uses active version if not specified.
+
+        Returns:
+            Dictionary with 'original', 'rendered', and 'variables' keys.
+
+        Raises:
+            PromptNotFoundError: If template not found.
+            VersionNotFoundError: If specified version not found.
+        """
+        import re
+
+        template = self.get_template(template_id)
+
+        # Get the version content
+        if version_number is not None:
+            version = self.get_version(template_id, version_number)
+            content = version.content
+        else:
+            active = template.active_version
+            if not active:
+                raise ValueError("No active version found")
+            content = active.content
+
+        # Extract variable names from template
+        variable_pattern = re.compile(r'\{([a-zA-Z_][a-zA-Z0-9_]*)\}')
+        variables = list(set(variable_pattern.findall(content)))
+
+        # Render by substituting variables
+        rendered = content
+        for var_name, var_value in context.items():
+            rendered = rendered.replace(f"{{{var_name}}}", str(var_value))
+
+        return {
+            "original": content,
+            "rendered": rendered,
+            "variables": variables,
+        }
+
+    def get_active_content_with_cache(
+        self,
+        template_name: str,
+        cache: "PromptCacheService",
+    ) -> Optional[str]:
+        """Get active prompt content with caching.
+
+        Uses read-through caching: tries cache first, falls back to DB,
+        then caches the result.
+
+        Args:
+            template_name: Template name to retrieve.
+            cache: Cache service instance.
+
+        Returns:
+            Active prompt content if found, None otherwise.
+        """
+        template = self.get_template_by_name(template_name)
+        if not template:
+            return None
+
+        prompt_type = template.prompt_type
+
+        def fetch_from_db() -> Optional[str]:
+            return self.get_active_content(template_name)
+
+        return cache.get_or_fetch(prompt_type, fetch_from_db)
+
+    def publish_version_with_cache(
+        self,
+        template_id: int,
+        version_number: int,
+        cache: "PromptCacheService",
+    ) -> PromptVersion:
+        """Publish a version and invalidate cache.
+
+        Args:
+            template_id: Template ID.
+            version_number: Version number to publish.
+            cache: Cache service instance.
+
+        Returns:
+            Published version.
+        """
+        # Get template to know prompt_type before publishing
+        template = self.get_template(template_id)
+        prompt_type = template.prompt_type
+
+        # Publish the version
+        version = self.publish_version(template_id, version_number)
+
+        # Invalidate cache
+        cache.invalidate_prompt(prompt_type)
+
+        return version
+
+    def get_active_content_with_fallback(
+        self,
+        template_name: str,
+        prompt_type: Optional[PromptType] = None,
+    ) -> Optional[str]:
+        """Get active prompt content with fallback to defaults.
+
+        This method is designed to never fail for missing prompts.
+        If the prompt is not found in the database, it returns the
+        default content for the given prompt type.
+
+        Args:
+            template_name: Template name to retrieve.
+            prompt_type: Optional prompt type for fallback.
+                        Required to get fallback content.
+
+        Returns:
+            Prompt content from DB or fallback default.
+            None only if prompt_type is not provided and template not found.
+        """
+        # Try to get from database first
+        content = self.get_active_content(template_name)
+        if content is not None:
+            return content
+
+        # Template not found - use fallback if prompt_type provided
+        if prompt_type is not None:
+            logger.warning(
+                f"Prompt '{template_name}' not found in database. "
+                f"Using fallback default for type '{prompt_type.value}'."
+            )
+            return DEFAULT_PROMPTS.get(prompt_type)
+
+        # No prompt_type provided, can't determine fallback
+        return None

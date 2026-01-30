@@ -25,13 +25,13 @@ def verify_api_key(
             detail="API key required",
         )
 
-    if not settings.api_key:
+    if not settings.secrets.api_key:
         raise HTTPException(
             status_code=500,
             detail="API key not configured on server",
         )
 
-    if x_api_key != settings.api_key:
+    if x_api_key != settings.secrets.api_key:
         raise HTTPException(
             status_code=401,
             detail="Invalid API key",
