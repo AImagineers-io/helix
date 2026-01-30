@@ -1,9 +1,11 @@
 """SQLAlchemy models for Helix database.
 
-This module defines the database models for prompt management:
+This module defines the database models for:
 - PromptTemplate: Container for prompt templates with metadata.
 - PromptVersion: Version history for prompt content with activation state.
 - PromptAuditLog: Audit trail for prompt changes.
+- AdminUser: Admin user accounts for authentication.
+- Role: User roles for RBAC.
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -219,3 +221,65 @@ class DailyAggregate(Base):
             f"<DailyAggregate(id={self.id}, date={self.date}, "
             f"conversations={self.conversation_count}, cost={self.cost_total})>"
         )
+
+
+class AdminUser(Base):
+    """Admin user model for authentication.
+
+    Stores admin user credentials and metadata for JWT-based authentication.
+
+    Attributes:
+        id: Primary key.
+        username: Unique username for login.
+        email: User email address (unique).
+        password_hash: Bcrypt hash of the user's password.
+        is_active: Whether the user account is active.
+        is_superuser: Whether the user has superuser privileges.
+        role: User's role (for RBAC).
+        mfa_secret: TOTP secret for MFA (optional).
+        mfa_enabled: Whether MFA is enabled for this user.
+        last_login: Timestamp of last successful login.
+        failed_login_attempts: Count of consecutive failed login attempts.
+        locked_until: Timestamp until which the account is locked (if any).
+        created_at: When the user was created.
+        updated_at: When the user was last modified.
+    """
+
+    __tablename__ = "admin_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    is_superuser = Column(Boolean, default=False, nullable=False)
+    role = Column(String(50), default="VIEWER", nullable=False, index=True)
+
+    # MFA fields
+    mfa_secret = Column(String(32), nullable=True)
+    mfa_enabled = Column(Boolean, default=False, nullable=False)
+
+    # Security fields
+    last_login = Column(TZDateTime, nullable=True)
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(TZDateTime, nullable=True)
+
+    created_at = Column(TZDateTime, default=utc_now, nullable=False)
+    updated_at = Column(TZDateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<AdminUser(id={self.id}, username={self.username}, "
+            f"role={self.role}, active={self.is_active})>"
+        )
+
+    def is_locked(self) -> bool:
+        """Check if the user account is currently locked.
+
+        Returns:
+            True if account is locked, False otherwise.
+        """
+        if self.locked_until is None:
+            return False
+        return datetime.now(timezone.utc) < self.locked_until

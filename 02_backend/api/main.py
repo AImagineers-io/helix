@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import get_settings, Settings
 from core.middleware import DemoAuthMiddleware
-from api.routers import branding, prompts, analytics
+from api.routers import branding, prompts, analytics, auth, admin
 
 
 def get_version() -> str:
@@ -68,6 +68,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(DemoAuthMiddleware)
 
     # Include routers
+    app.include_router(auth.router)
+    app.include_router(admin.router)
     app.include_router(branding.router, tags=['Branding'])
     app.include_router(prompts.router)
     app.include_router(analytics.router)

@@ -86,3 +86,12 @@ def get_db():
 def init_db():
     """Initialize database by creating all tables."""
     Base.metadata.create_all(bind=engine)
+
+
+def get_engine():
+    """Get the database engine instance.
+
+    Returns:
+        SQLAlchemy engine instance.
+    """
+    return engine
