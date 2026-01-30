@@ -10,6 +10,7 @@ Required Environment Variables:
     - DATABASE_URL: PostgreSQL connection string (no default)
 
 Optional Environment Variables:
+    - ENVIRONMENT: Environment type (development, demo, production)
     - LOGO_URL: URL to logo image (default: None)
     - PRIMARY_COLOR: Brand color hex (default: #3B82F6)
     - APP_DESCRIPTION: Short description (default: 'AI-powered Q&A chatbot')
@@ -24,9 +25,20 @@ Usage:
     print(settings.features.is_enabled('analytics'))
 """
 import os
+import re
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
+from urllib.parse import urlparse
 from pydantic import BaseModel
+
+
+# Environment type constants
+ENV_DEVELOPMENT = 'development'
+ENV_DEMO = 'demo'
+ENV_PRODUCTION = 'production'
+
+# Pre-compiled regex for production database detection
+_PRODUCTION_DB_PATTERN = re.compile(r'prod', re.IGNORECASE)
 
 
 def _parse_bool(value: str) -> bool:
@@ -110,6 +122,31 @@ class FeatureFlags(BaseModel):
         return getattr(self, attr_name, False)
 
 
+class DemoAuthConfig(BaseModel):
+    """Demo environment authentication configuration.
+
+    Provides basic HTTP authentication for demo environments to prevent
+    unauthorized access while keeping authentication simple for demos.
+
+    Attributes:
+        enabled: Whether demo auth is enabled (requires username and password).
+        username: Username for basic auth.
+        password: Password for basic auth.
+        public_paths: Paths that don't require authentication.
+    """
+
+    enabled: bool = False
+    username: Optional[str] = None
+    password: Optional[str] = None
+    public_paths: list[str] = ['/health', '/branding', '/docs', '/openapi.json']
+
+    def __init__(self, **data):
+        """Initialize and auto-enable if credentials are set."""
+        super().__init__(**data)
+        if self.username and self.password:
+            object.__setattr__(self, 'enabled', True)
+
+
 class Settings(BaseModel):
     """Application settings loaded from environment.
 
@@ -121,6 +158,7 @@ class Settings(BaseModel):
         and should never be exposed to the frontend or logged.
 
     Attributes:
+        environment: Deployment environment (development, demo, production).
         database_url: PostgreSQL connection string.
         redis_url: Redis connection string for caching.
         secrets: Sensitive configuration (API keys, tokens).
@@ -130,6 +168,9 @@ class Settings(BaseModel):
         branding: White-label branding configuration (public-safe).
         features: Feature flags for enabling/disabling functionality.
     """
+
+    # Environment (development, demo, production)
+    environment: str = 'development'
 
     # Database (set via environment, empty string as fallback for testing)
     database_url: str = ''
@@ -153,6 +194,9 @@ class Settings(BaseModel):
     # Feature flags
     features: FeatureFlags = FeatureFlags()
 
+    # Demo environment authentication
+    demo_auth: DemoAuthConfig = DemoAuthConfig()
+
     def __init__(self, **data):
         """Initialize settings, loading from environment first."""
         env_data = self._load_from_env()
@@ -166,6 +210,9 @@ class Settings(BaseModel):
             Dictionary of settings loaded from environment.
         """
         data: dict = {}
+
+        # Environment
+        data['environment'] = os.getenv('ENVIRONMENT', 'development')
 
         # Core settings
         if os.getenv('DATABASE_URL'):
@@ -197,6 +244,11 @@ class Settings(BaseModel):
         features_data = self._load_features_from_env()
         if features_data:
             data['features'] = FeatureFlags(**features_data)
+
+        # Demo auth
+        demo_auth_data = self._load_demo_auth_from_env()
+        if demo_auth_data:
+            data['demo_auth'] = DemoAuthConfig(**demo_auth_data)
 
         return data
 
@@ -280,6 +332,25 @@ class Settings(BaseModel):
             )
         return features_data
 
+    def _load_demo_auth_from_env(self) -> dict:
+        """Load demo authentication configuration from environment.
+
+        Returns:
+            Dictionary of demo auth config loaded from environment.
+        """
+        demo_auth_data: dict = {}
+
+        if os.getenv('DEMO_USERNAME'):
+            demo_auth_data['username'] = os.getenv('DEMO_USERNAME')
+        if os.getenv('DEMO_PASSWORD'):
+            demo_auth_data['password'] = os.getenv('DEMO_PASSWORD')
+        if os.getenv('DEMO_PUBLIC_PATHS'):
+            demo_auth_data['public_paths'] = [
+                p.strip() for p in os.getenv('DEMO_PUBLIC_PATHS', '').split(',')
+            ]
+
+        return demo_auth_data
+
 
 def validate_config(settings: Settings) -> None:
     """Validate that all required configuration is present.
@@ -315,3 +386,70 @@ def get_settings() -> Settings:
         Cached Settings instance loaded from environment.
     """
     return Settings()
+
+
+def is_production_database_url(database_url: str) -> bool:
+    """Check if a database URL appears to be a production database.
+
+    Identifies production databases by looking for 'prod' in:
+    - The hostname
+    - The database name
+
+    Args:
+        database_url: Database connection string.
+
+    Returns:
+        True if the URL appears to be a production database.
+
+    Examples:
+        >>> is_production_database_url('postgresql://u:p@prod-db.com:5432/db')
+        True
+        >>> is_production_database_url('postgresql://u:p@localhost:5432/helix')
+        False
+        >>> is_production_database_url('sqlite:///:memory:')
+        False
+    """
+    if not database_url:
+        return False
+
+    # SQLite databases are never considered production
+    if database_url.startswith('sqlite://'):
+        return False
+
+    try:
+        parsed = urlparse(database_url)
+        hostname = parsed.hostname or ''
+        db_name = (parsed.path or '').lstrip('/')
+
+        return bool(
+            _PRODUCTION_DB_PATTERN.search(hostname) or
+            _PRODUCTION_DB_PATTERN.search(db_name)
+        )
+    except Exception:
+        return False
+
+
+def validate_environment_safety(settings: Settings) -> None:
+    """Validate that demo environments cannot connect to production databases.
+
+    This is a critical safety check to prevent demo environments from
+    accidentally accessing or modifying production data.
+
+    Call this function at application startup to fail fast if the demo
+    environment is misconfigured.
+
+    Args:
+        settings: Settings instance to validate.
+
+    Raises:
+        ValueError: If demo environment is configured with production database.
+    """
+    if settings.environment != ENV_DEMO:
+        return
+
+    if is_production_database_url(settings.database_url):
+        raise ValueError(
+            "Demo environment cannot connect to production database. "
+            f"DATABASE_URL appears to be a production database: {settings.database_url}. "
+            "Please use a demo or development database URL."
+        )

@@ -1,0 +1,25 @@
+# Helix Demo Reset Cron Job
+# Runs daily at 3 AM UTC to reset demo environment data
+#
+# This job clears:
+#   - Conversations
+#   - Observability events
+#
+# This job preserves:
+#   - QA pairs (knowledge base)
+#   - Prompt templates and versions
+#
+# Installation:
+#   crontab -e
+#   Add the line below (adjust path as needed)
+#
+# Environment:
+#   Ensure ENVIRONMENT=demo in .env.demo
+#   Ensure DATABASE_URL points to demo database
+#
+# Logging:
+#   Logs to /var/log/helix/demo-reset.log
+#
+
+# Daily at 3 AM UTC
+0 3 * * * cd /opt/helix && /usr/bin/python3 scripts/reset_demo.py >> /var/log/helix/demo-reset.log 2>&1

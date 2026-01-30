@@ -7,6 +7,8 @@ import pytest
 
 # Add backend to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '02_backend'))
+# Add scripts to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
 # Set default environment variables for testing
