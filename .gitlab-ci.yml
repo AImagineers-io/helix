@@ -1,10 +1,25 @@
 stages:
+  - verify
   - deploy
+
+# Branding verification - blocks deploy if prohibited terms found
+verify-branding:
+  stage: verify
+  only:
+    - main
+    - merge_requests
+  script:
+    - echo "🔍 Checking for prohibited branding terms..."
+    - chmod +x ./scripts/check-branding.sh
+    - ./scripts/check-branding.sh .
+  allow_failure: false
 
 deploy:
   stage: deploy
   only:
     - main
+  needs:
+    - verify-branding
   script:
     - echo "🚀 Deploying Helix to apps01..."
 

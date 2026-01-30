@@ -60,7 +60,7 @@ const CONFLICT_MESSAGE = 'Someone else edited this prompt. Refresh to see change
 
 export function useToast() {
   const [toasts, setToasts] = useState<ToastData[]>([])
-  const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Cleanup timers on unmount
   useEffect(() => {

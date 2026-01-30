@@ -16,14 +16,16 @@
  */
 
 /** Type of difference for a line */
-export enum DiffType {
+export const DiffType = {
   /** Line exists in both versions unchanged */
-  Unchanged = 'unchanged',
+  Unchanged: 'unchanged',
   /** Line was added in the new version */
-  Added = 'added',
+  Added: 'added',
   /** Line was removed from the old version */
-  Removed = 'removed',
-}
+  Removed: 'removed',
+} as const
+
+export type DiffType = (typeof DiffType)[keyof typeof DiffType]
 
 /** Represents a single line in the diff output */
 export interface DiffLine {
@@ -95,19 +97,16 @@ function generateDiff(
   newLines: string[],
   lcs: number[][]
 ): DiffLine[] {
-  const result: DiffLine[] = []
   let i = oldLines.length
   let j = newLines.length
-  let oldLineNum = oldLines.length
-  let newLineNum = newLines.length
 
   // Backtrack through LCS table
-  const tempResult: DiffLine[] = []
+  const result: DiffLine[] = []
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
       // Lines match - unchanged
-      tempResult.unshift({
+      result.unshift({
         type: DiffType.Unchanged,
         content: oldLines[i - 1],
         oldLineNumber: i,
@@ -117,7 +116,7 @@ function generateDiff(
       j--
     } else if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
       // Added in new
-      tempResult.unshift({
+      result.unshift({
         type: DiffType.Added,
         content: newLines[j - 1],
         newLineNumber: j,
@@ -125,7 +124,7 @@ function generateDiff(
       j--
     } else if (i > 0) {
       // Removed from old
-      tempResult.unshift({
+      result.unshift({
         type: DiffType.Removed,
         content: oldLines[i - 1],
         oldLineNumber: i,
@@ -134,5 +133,5 @@ function generateDiff(
     }
   }
 
-  return tempResult
+  return result
 }

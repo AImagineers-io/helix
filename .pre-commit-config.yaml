@@ -1,0 +1,45 @@
+# Pre-commit hooks for Helix
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Local hooks
+  - repo: local
+    hooks:
+      - id: check-branding
+        name: Check for prohibited branding terms
+        entry: ./scripts/check-branding.sh
+        language: script
+        types: [text]
+        pass_filenames: false
+        always_run: true
+        description: Prevents committing code with 'palai' or 'philrice' references
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(node_modules/|dist/|build/|\.git/)
+      - id: end-of-file-fixer
+        exclude: ^(node_modules/|dist/|build/|\.git/)
+      - id: check-yaml
+        exclude: ^(node_modules/)
+      - id: check-json
+        exclude: ^(node_modules/)
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # Python formatting (optional - uncomment to enable)
+  # - repo: https://github.com/psf/black
+  #   rev: 24.1.1
+  #   hooks:
+  #     - id: black
+  #       language_version: python3.11
+
+  # Python linting (optional - uncomment to enable)
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.1.14
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]

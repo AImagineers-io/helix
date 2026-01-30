@@ -51,7 +51,7 @@ export function PromptSearch({
 }: PromptSearchProps) {
   const [searchValue, setSearchValue] = useState(initialSearch)
   const [selectedType, setSelectedType] = useState(initialType)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Debounced search callback
   useEffect(() => {

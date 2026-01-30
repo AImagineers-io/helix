@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { DateRangePreset } from '../../hooks/useDateRange';
+import type { DateRangePreset } from '../../hooks/useDateRange';
 
 export interface DateRangePickerProps {
   preset: DateRangePreset;

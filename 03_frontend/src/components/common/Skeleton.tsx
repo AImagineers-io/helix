@@ -14,7 +14,7 @@
  * {loading ? <PromptEditorSkeleton /> : <PromptEditor />}
  * ```
  */
-import { CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 
 /** Props for the base Skeleton component */
 export interface SkeletonProps {

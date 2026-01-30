@@ -21,7 +21,8 @@
  * ```
  */
 import { useState, useMemo } from 'react'
-import { computeDiff, DiffType, DiffLine } from '../../utils/diff'
+import { computeDiff, DiffType } from '../../utils/diff'
+import type { DiffLine } from '../../utils/diff'
 
 /** Available view modes for the diff display */
 export type ViewMode = 'unified' | 'split'

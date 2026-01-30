@@ -90,12 +90,10 @@ class FeatureFlags(BaseModel):
     """Feature flags to enable/disable functionality.
 
     Attributes:
-        enable_variety_processor: Enable variety-specific chat processing.
         enable_messenger: Enable Facebook Messenger integration.
         enable_analytics: Enable analytics and observability features.
     """
 
-    enable_variety_processor: bool = True
     enable_messenger: bool = True
     enable_analytics: bool = True
 
@@ -272,10 +270,6 @@ class Settings(BaseModel):
     def _load_features_from_env(self) -> dict:
         """Load feature flags from environment."""
         features_data: dict = {}
-        if os.getenv('ENABLE_VARIETY_PROCESSOR'):
-            features_data['enable_variety_processor'] = _parse_bool(
-                os.getenv('ENABLE_VARIETY_PROCESSOR', 'true')
-            )
         if os.getenv('ENABLE_MESSENGER'):
             features_data['enable_messenger'] = _parse_bool(
                 os.getenv('ENABLE_MESSENGER', 'true')

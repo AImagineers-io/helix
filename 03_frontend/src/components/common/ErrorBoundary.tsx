@@ -22,7 +22,8 @@
  * </ErrorBoundary>
  * ```
  */
-import { Component, ReactNode, ErrorInfo } from 'react'
+import { Component } from 'react'
+import type { ReactNode, ErrorInfo } from 'react'
 
 /**
  * Props for the ErrorBoundary component.

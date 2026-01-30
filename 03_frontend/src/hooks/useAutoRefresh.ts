@@ -43,7 +43,7 @@ export function useAutoRefresh(
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEnabled, setIsEnabled] = useState(initialEnabled);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastRefreshRef = useRef<number>(Date.now());
   const onRefreshRef = useRef(onRefresh);
 

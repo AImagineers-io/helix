@@ -2,7 +2,6 @@
 Unit tests for feature flag configuration.
 
 Tests cover:
-- ENABLE_VARIETY_PROCESSOR flag
 - ENABLE_MESSENGER flag
 - ENABLE_ANALYTICS flag
 - Default values (all enabled by default)
@@ -14,17 +13,6 @@ from core.config import Settings, FeatureFlags, get_settings
 
 class TestFeatureFlags:
     """Tests for feature flag configuration."""
-
-    def test_enable_variety_processor_default_true(self, clean_env):
-        """Test that ENABLE_VARIETY_PROCESSOR defaults to True."""
-        settings = Settings()
-        assert settings.features.enable_variety_processor is True
-
-    def test_enable_variety_processor_false_from_env(self, clean_env, monkeypatch):
-        """Test that ENABLE_VARIETY_PROCESSOR can be disabled."""
-        monkeypatch.setenv('ENABLE_VARIETY_PROCESSOR', 'false')
-        settings = Settings()
-        assert settings.features.enable_variety_processor is False
 
     def test_enable_messenger_default_true(self, clean_env):
         """Test that ENABLE_MESSENGER defaults to True."""
@@ -58,7 +46,6 @@ class TestFeatureFlagsModel:
         settings = Settings()
         flags_dict = settings.features.model_dump()
 
-        assert flags_dict['enable_variety_processor'] is True
         assert flags_dict['enable_messenger'] is False
         assert flags_dict['enable_analytics'] is True
 
@@ -67,7 +54,6 @@ class TestFeatureFlagsModel:
         settings = Settings()
         features = settings.features
 
-        assert hasattr(features, 'enable_variety_processor')
         assert hasattr(features, 'enable_messenger')
         assert hasattr(features, 'enable_analytics')
 
@@ -76,7 +62,6 @@ class TestFeatureFlagsModel:
         monkeypatch.setenv('ENABLE_ANALYTICS', 'false')
         settings = Settings()
 
-        assert settings.features.is_enabled('variety_processor') is True
         assert settings.features.is_enabled('messenger') is True
         assert settings.features.is_enabled('analytics') is False
 
