@@ -358,6 +358,107 @@ CostRecord aggregated by day/month
 
 ---
 
+## LLM Integration Architecture
+
+### Overview
+
+The LLM integration layer abstracts provider interactions behind a unified interface. The chatbot doesn't care whether it's talking to OpenAI or Anthropic - it just needs responses and embeddings.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      LLM Integration Layer                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Pipeline → LLMService → FallbackOrchestrator → Providers      │
+│                  │                │                              │
+│                  ▼                ▼                              │
+│            ResponseCache     HealthTracker                       │
+│                  │                                               │
+│                  ▼                                               │
+│            CostTracker → CostRecord (DB)                        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Responsibility |
+|-----------|----------------|
+| **LLMProvider** | Abstract interface for generate() and embed() |
+| **OpenAIProvider** | Primary provider - GPT-4o-mini + embeddings |
+| **AnthropicProvider** | Fallback provider - Claude (no embeddings) |
+| **FallbackOrchestrator** | Automatic failover between providers |
+| **HealthTracker** | Track provider health, trigger cooldowns |
+| **ResponseCache** | Redis cache for identical queries |
+| **CostTracker** | Record token usage and costs |
+| **TokenCounter** | Count tokens, truncate context |
+
+### Fallback Chain
+
+```
+1. Check ResponseCache
+   └─ HIT → Return cached response (instant, free)
+   └─ MISS → Continue
+
+2. Try Primary Provider (OpenAI)
+   └─ SUCCESS → Cache response, track cost, return
+   └─ TIMEOUT/ERROR → Continue
+
+3. Try Fallback Provider (Anthropic)
+   └─ SUCCESS → Cache response, track cost, return
+   └─ TIMEOUT/ERROR → Continue
+
+4. Graceful Degradation
+   └─ Return apologetic message
+   └─ Log all failures for monitoring
+```
+
+### Provider Interface
+
+```python
+class LLMProvider(ABC):
+    @abstractmethod
+    async def generate(
+        self,
+        system_prompt: str,
+        user_message: str,
+        context: Optional[str] = None,
+        max_tokens: int = 1024,
+        temperature: float = 0.7,
+    ) -> LLMResponse:
+        """Generate text completion."""
+
+    @abstractmethod
+    async def embed(self, texts: List[str]) -> EmbeddingResponse:
+        """Generate embeddings for texts."""
+
+    @property
+    @abstractmethod
+    def supports_embeddings(self) -> bool:
+        """Whether this provider supports embeddings."""
+```
+
+### Cost Tracking
+
+| Model | Input (per 1M) | Output (per 1M) |
+|-------|----------------|-----------------|
+| gpt-4o-mini | $0.15 | $0.60 |
+| gpt-4o | $2.50 | $10.00 |
+| claude-3-haiku | $0.25 | $1.25 |
+| claude-3.5-sonnet | $3.00 | $15.00 |
+| text-embedding-3-small | $0.02 | - |
+
+### Token Management
+
+| Setting | Value |
+|---------|-------|
+| Max context tokens | 4000 |
+| Max output tokens | 1024 |
+| Reserved for output | 1024 |
+| Truncation strategy | Oldest history first |
+
+---
+
 ## API Surface
 
 ### Chat API
