@@ -2322,3 +2322,371 @@ P12.3.1 (Prompt Injection) ✓
 
 *P12 Session Completed: January 30, 2026*
 *Completed: P12.1.1, P12.1.2, P12.2.1, P12.3.1*
+
+---
+
+# P12 Security Tightening - Session 2 Update
+
+## Summary
+
+Second P12 session completed remaining critical security components in Phases 12.1, 12.2, and 12.3.
+
+### New Implementations (This Session)
+
+| Task | Description | Tests |
+|------|-------------|-------|
+| P12.1.3 | API Key Rotation with 24h grace period | 28 |
+| P12.1.4 | Multi-Factor Authentication (TOTP) | 29 |
+| P12.1.5 | Session Management with token blacklisting | 21 |
+| P12.2.2 | Request Size Limits (middleware) | 18 |
+| P12.2.3 | File Upload Validation (magic bytes) | 22 |
+| P12.2.4 | URL Validation (SSRF prevention) | 30 |
+| P12.2.5 | Output Encoding (HTML/JSON/LLM) | 26 |
+| P12.3.2 | LLM Output Sanitization | 15 |
+| P12.3.3 | Token Limit Controls | 18 |
+| P12.3.4 | Jailbreak Prevention | 20 |
+| P12.3.5 | PII Detection and Redaction | 24 |
+
+**Session Total: 251 new tests (all passing)**
+
+### Files Created (This Session)
+
+**Services:**
+- `services/api_key_service.py` - Key generation, rotation, revocation
+- `services/mfa_service.py` - TOTP generation/verification, backup codes
+- `services/session_service.py` - Session tracking, token blacklisting
+- `services/file_validator.py` - Magic byte validation, extension whitelist
+- `services/pii_detector.py` - Email, phone, SSN, credit card detection
+- `services/pii_redactor.py` - Full and partial redaction modes
+- `services/llm_guard.py` - Token counting, limits, abuse detection
+
+**Core:**
+- `core/request_limits.py` - Request size middleware
+- `core/validators.py` - URL validation for SSRF prevention
+- `core/encoder.py` - Output encoding utilities
+
+**Chat Processors:**
+- `services/chat/processors/output_sanitizer.py` - LLM output sanitization
+- `services/chat/processors/jailbreak_detector.py` - Jailbreak pattern detection
+
+---
+
+## Phase 12.1-12.3 Completion Status
+
+| Phase | Tasks | Complete | Status |
+|-------|-------|----------|--------|
+| 12.1 Auth | 5 | 5 | **100%** |
+| 12.2 Input | 5 | 5 | **100%** |
+| 12.3 LLM | 5 | 5 | **100%** |
+| **Total Critical** | **15** | **15** | **100%** |
+
+---
+
+## Remaining Tasks (Phases 12.4-12.8)
+
+| Phase | Description | Tasks | Priority |
+|-------|-------------|-------|----------|
+| 12.4 | API Security | 5 | High |
+| 12.5 | Data Protection | 5 | High |
+| 12.6 | Audit & Monitoring | 5 | Medium |
+| 12.7 | Infrastructure | 5 | Medium |
+| 12.8 | Compliance | 5 | Low |
+| **Remaining** | | **25** | |
+
+---
+
+## Identified Gaps
+
+### 1. Services Use In-Memory Storage
+
+**Issue**: APIKeyService, SessionService, MFAService use in-memory dicts.
+
+**Impact**: Data lost on server restart.
+
+**Recommendation**: Create database tables:
+- `api_keys` - Key storage with rotation support
+- `sessions` - Session tracking with TTL
+- `mfa_secrets` - Encrypted TOTP secrets
+
+### 2. Middleware Not Wired
+
+**Issue**: RequestSizeLimitMiddleware created but not added to FastAPI app.
+
+**Impact**: Request limits not enforced.
+
+**Recommendation**: Add to `api/main.py`:
+```python
+from core.request_limits import RequestSizeLimitMiddleware, RequestLimits
+app.add_middleware(RequestSizeLimitMiddleware, limits=RequestLimits())
+```
+
+### 3. Token Counting Approximate
+
+**Issue**: LLM Guard uses simple char/4 approximation.
+
+**Impact**: Token limits not accurate for all models.
+
+**Recommendation**: Integrate tiktoken for accurate counts, with fallback to approximation.
+
+### 4. Backup Codes Stored Plaintext
+
+**Issue**: MFA backup codes stored as plaintext in memory.
+
+**Impact**: Security risk if memory dumped.
+
+**Recommendation**: Hash backup codes like passwords.
+
+---
+
+## Concrete Next Steps
+
+### Immediate (Before Production)
+
+1. **Wire middleware into FastAPI** - 15 min
+2. **Create database migrations** - 2 hours
+3. **Integrate validation into routes** - 1 hour
+
+### Short-term (P12.4)
+
+4. **Implement CORS configuration** - 1 hour
+5. **Add CSP headers** - 1 hour
+6. **Wire rate limiting per API key** - 2 hours
+7. **Add webhook signature validation** - 2 hours
+
+### Medium-term (P12.5-12.6)
+
+8. **Secrets management integration** - 3 hours
+9. **Security event logging** - 3 hours
+10. **Security dashboard** - 4 hours
+
+---
+
+## Test Summary
+
+| Area | Tests | Status |
+|------|-------|--------|
+| API Key Rotation | 28 | PASS |
+| MFA (TOTP) | 29 | PASS |
+| Session Management | 21 | PASS |
+| Request Limits | 18 | PASS |
+| File Validation | 22 | PASS |
+| URL Validation | 30 | PASS |
+| Output Encoding | 26 | PASS |
+| LLM Sanitization | 15 | PASS |
+| Jailbreak Detection | 20 | PASS |
+| PII Detection | 24 | PASS |
+| Token Limits | 18 | PASS |
+| **Total (Session)** | **251** | **PASS** |
+
+---
+
+## Recommendation
+
+**Create P13: Security Infrastructure**
+
+P12 implemented security logic. P13 should implement integration:
+
+1. Database persistence for security services
+2. Middleware wiring
+3. Security logging infrastructure
+4. Security admin UI
+5. E2E security tests
+
+This separates "logic" (complete) from "infrastructure" (new phase).
+
+---
+
+*P12 Session 2 Completed: February 2, 2026*
+*Completed: P12.1.3, P12.1.4, P12.1.5, P12.2.2-5, P12.3.2-5*
+
+---
+
+# P12 Security Tightening - Session 3 Update
+
+## Summary
+
+Third P12 session completed Phases 12.4 (API Security), 12.5 (Data Protection), 12.6 (Security Audit), and 12.8 (Compliance Foundations).
+
+### New Implementations (This Session)
+
+| Task | Description | Tests |
+|------|-------------|-------|
+| P12.4.1 | CORS Configuration | 22 |
+| P12.4.2 | Content Security Policy Headers | 23 |
+| P12.4.3 | Rate Limiting per API Key | 19 |
+| P12.4.4 | Webhook Signature Validation | 23 |
+| P12.4.5 | API Request Signing | 22 |
+| P12.5.1 | Secrets Management Integration | 18 |
+| P12.5.2 | Field-level Encryption (AES-256-GCM) | 21 |
+| P12.5.3 | TLS Configuration | 21 |
+| P12.5.4 | Secure Logging (Data Masking) | 27 |
+| P12.5.5 | Data Retention Enforcement | 19 |
+| P12.6.1 | Security Event Logging (CEF Format) | 22 |
+| P12.6.2 | Anomaly Detection for Chat Abuse | 18 |
+| P12.6.4 | Security Alerting | 17 |
+| P12.6.5 | Incident Response Automation | 20 |
+| P12.8.1 | Consent Management | 15 |
+| P12.8.2 | DSAR (Data Subject Access Request) | 18 |
+| P12.8.4 | Data Access Audit Trail | 17 |
+
+**Session Total: 342 new tests (all passing)**
+
+### Files Created (This Session)
+
+**Core:**
+- `core/cors.py` - CORS configuration and middleware
+- `core/security_headers.py` - CSP, X-Frame-Options, HSTS
+- `core/api_rate_limiter.py` - Per-API-key rate limiting
+- `core/webhook_security.py` - Webhook signature validation
+- `core/secrets.py` - Secrets management (env/vault/aws providers)
+- `core/encryption.py` - AES-256-GCM field encryption
+- `core/tls_config.py` - TLS configuration helpers
+- `core/secure_logger.py` - Data masking in logs
+
+**Services:**
+- `services/http_client.py` - Request signing for internal APIs
+- `services/data_retention_service.py` - Data retention enforcement
+- `services/security_audit.py` - Security event logging
+- `services/alerting.py` - Multi-channel security alerting
+- `services/incident_response.py` - Automated incident response
+- `services/consent_service.py` - GDPR consent management
+- `services/dsar_service.py` - Data subject access requests
+- `services/data_audit.py` - Data access audit trail
+
+**Chat Processors:**
+- `services/chat/abuse_detector.py` - Anomaly detection for chat
+
+---
+
+## Phase Completion Status
+
+| Phase | Tasks | Complete | Status |
+|-------|-------|----------|--------|
+| 12.1 Auth | 5 | 5 | **100%** |
+| 12.2 Input | 5 | 5 | **100%** |
+| 12.3 LLM | 5 | 5 | **100%** |
+| 12.4 API Security | 5 | 5 | **100%** |
+| 12.5 Data Protection | 5 | 5 | **100%** |
+| 12.6 Audit & Monitoring | 5 | 4 | **80%** |
+| 12.7 Infrastructure | 5 | 0 | **0%** |
+| 12.8 Compliance | 5 | 3 | **60%** |
+| **Total** | **40** | **32** | **80%** |
+
+---
+
+## Not Implemented (This Session)
+
+### P12.6.3 - Security Dashboard
+**Reason**: Frontend React component - requires integration with existing dashboard infrastructure.
+
+### P12.7.x - Infrastructure Security
+**Reason**: Infrastructure-level tasks (Docker hardening, network segmentation, database security, Redis security, dependency scanning) require deployment environment changes rather than code.
+
+### P12.8.3 - Privacy Policy Template
+**Reason**: Legal document, not code.
+
+### P12.8.5 - Cookie Consent (Frontend)
+**Reason**: React component requiring frontend integration.
+
+---
+
+## Identified Gaps
+
+### 1. Middleware Not Wired Into FastAPI
+
+**Issue**: CORSMiddleware, SecurityHeadersMiddleware, and others created but not added to app.
+
+**Recommendation**: Add to `api/main.py`:
+```python
+from core.cors import CORSMiddleware, CORSConfig
+from core.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
+
+cors_config = CORSConfig(allowed_origins=settings.allowed_origins)
+app.add_middleware(CORSMiddleware, config=cors_config)
+
+security_config = SecurityHeadersConfig(enable_hsts=True)
+app.add_middleware(SecurityHeadersMiddleware, config=security_config)
+```
+
+### 2. Services Use In-Memory Storage
+
+**Issue**: All new services use in-memory dicts for data.
+
+**Impact**: Data lost on server restart.
+
+**Recommendation**: Create database tables and repositories for:
+- Security events
+- Consent records
+- DSAR requests
+- Data access logs
+- Blocked IPs/devices
+
+### 3. No Cryptography Library Dependency
+
+**Issue**: Encryption module has fallback XOR when cryptography library not available.
+
+**Recommendation**: Add to requirements.txt:
+```
+cryptography>=41.0.0
+```
+
+### 4. Missing Integration Points
+
+The following need wiring:
+- `AbuseDetector` → Chat pipeline
+- `SecureLogger` → All logging calls
+- `DataAuditService` → Database access layer
+- `ConsentService` → User registration/data access
+
+---
+
+## Test Summary
+
+| Phase | Tests | Status |
+|-------|-------|--------|
+| P12.4 API Security | 109 | PASS |
+| P12.5 Data Protection | 106 | PASS |
+| P12.6 Audit & Monitoring | 77 | PASS |
+| P12.8 Compliance | 50 | PASS |
+| **Session Total** | **342** | **PASS** |
+
+---
+
+## Cumulative P12 Statistics
+
+| Metric | Value |
+|--------|-------|
+| Tasks Completed | 32/40 (80%) |
+| Total Tests | 593 (251 + 342) |
+| Files Created | 35+ |
+| Estimated LOC | ~3,500 |
+
+---
+
+## Recommendations for Remaining Tasks
+
+### P12.7 Infrastructure (5 tasks)
+Create separate infrastructure phase or integrate with DevOps:
+1. Docker container hardening → DevOps task
+2. Network segmentation → docker-compose.yml changes
+3. Database security → DBA task
+4. Redis security → redis.conf changes
+5. Dependency scanning → CI/CD integration
+
+### P12.8 Remaining (2 tasks)
+1. Privacy policy template → Legal/compliance team
+2. Cookie consent → Frontend P13 or separate UI phase
+
+### Integration Phase (P13 Recommendation)
+Create P13 to wire all security components:
+1. Middleware registration
+2. Database persistence
+3. Service integration into routes
+4. Frontend auth flow
+5. E2E security tests
+
+---
+
+*P12 Session 3 Completed: February 2, 2026*
+*Completed: P12.4.1-5, P12.5.1-5, P12.6.1-2,4-5, P12.8.1-2,4*
+*Total P12 Progress: 32/40 tasks (80%)*

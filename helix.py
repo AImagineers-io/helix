@@ -302,6 +302,9 @@ def cmd_seed(seed_type="demo"):
         from database.seeds.demo_prompts import seed_demo_prompts
         from sqlalchemy.orm import Session
 
+        # Import ALL models to ensure they're registered with Base metadata
+        from database import models  # noqa: F401
+
         # Create tables if they don't exist
         Base.metadata.create_all(bind=engine)
 
@@ -322,8 +325,7 @@ def cmd_seed(seed_type="demo"):
             elif seed_type == "reset":
                 print_info("Resetting database...")
 
-                # Import models to ensure they're registered
-                from database.models import PromptTemplate, PromptVersion
+                # Models already imported above via 'from database import models'
 
                 # Drop all tables
                 Base.metadata.drop_all(bind=engine)
