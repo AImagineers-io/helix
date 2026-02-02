@@ -86,8 +86,12 @@ export const promptsApi = {
     if (promptType) {
       params.prompt_type = promptType
     }
+    const apiKey = import.meta.env.VITE_API_KEY
     const response = await axios.get<PromptTemplateListItem[]>(`${API_BASE_URL}/prompts`, {
       params,
+      headers: {
+        'X-API-Key': apiKey,
+      },
     })
     return response.data
   },
@@ -99,7 +103,12 @@ export const promptsApi = {
    * @returns Complete template with version history
    */
   async getPrompt(id: number): Promise<PromptTemplate> {
-    const response = await axios.get<PromptTemplate>(`${API_BASE_URL}/prompts/${id}`)
+    const apiKey = import.meta.env.VITE_API_KEY
+    const response = await axios.get<PromptTemplate>(`${API_BASE_URL}/prompts/${id}`, {
+      headers: {
+        'X-API-Key': apiKey,
+      },
+    })
     return response.data
   },
 
