@@ -23,7 +23,7 @@ export default function Settings() {
     async function fetchConfig() {
       try {
         setLoading(true)
-        const response = await axios.get<BrandingConfig>('/api/branding/config')
+        const response = await axios.get<BrandingConfig>('/api/branding')
         setConfig(response.data)
       } catch (err) {
         setError('Failed to load configuration')
