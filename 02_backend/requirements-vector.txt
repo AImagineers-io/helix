@@ -1,0 +1,4 @@
+# Vector database support for RAG operations
+# Requires PostgreSQL with pgvector extension >= 0.5.0
+
+pgvector>=0.2.0,<0.3.0
