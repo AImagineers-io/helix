@@ -291,6 +291,54 @@ Manages the knowledge base:
 └─────────────────────────────────────────────────────────┘
 ```
 
+### QA Import System
+
+Enables bulk population of the knowledge base from external files:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Import System                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  File Upload → Parser → Validation → Batch Processor → QA Pairs │
+│       │           │          │              │              │     │
+│       │           │          │              │              ▼     │
+│       │           │          │              │         Embeddings │
+│       │           │          │              │                    │
+│       ▼           ▼          ▼              ▼                    │
+│  ImportJob   ParsedQA   PipelineResult  Progress Tracking        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Import Components
+
+| Component | Responsibility |
+|-----------|----------------|
+| **CSV Parser** | Parse CSV with flexible column detection |
+| **JSON Parser** | Parse JSON arrays of QA objects |
+| **Text Parser** | Parse Q:/A: patterns from plain text |
+| **QA Validator** | Validate required fields, length limits |
+| **Duplicate Detector** | Find near-duplicates in file and database |
+| **Batch Processor** | Process large files in batches with progress |
+| **Import Service** | Orchestrate complete import flow |
+
+#### Import Job Lifecycle
+
+```
+PENDING → PROCESSING → COMPLETED
+                    └→ FAILED
+                    └→ CANCELLED
+```
+
+#### Supported Formats
+
+| Format | Extensions | Column Detection |
+|--------|------------|------------------|
+| CSV | .csv | question/q/query, answer/a/response |
+| JSON | .json | [{question, answer, category?, tags?}] |
+| Text | .txt, .text | Q:/Question: and A:/Answer: patterns |
+
 ---
 
 ## Data Model
@@ -328,6 +376,22 @@ Manages the knowledge base:
 │ created_at      │       │ payload         │
 └─────────────────┘       │ timestamp       │
                           └─────────────────┘
+
+┌─────────────────┐
+│   ImportJob     │
+├─────────────────┤
+│ id              │
+│ status          │
+│ source_type     │
+│ filename        │
+│ total_rows      │
+│ processed_rows  │
+│ success_count   │
+│ error_count     │
+│ errors (JSON)   │
+│ started_at      │
+│ completed_at    │
+└─────────────────┘
 ```
 
 ### Entity Relationships
@@ -337,6 +401,7 @@ QAPair has one Embedding (vector)
 PromptTemplate has many Versions (audit trail)
 Conversation has many ObservabilityEvents
 CostRecord aggregated by day/month
+ImportJob tracks bulk QA imports (standalone)
 ```
 
 ### Single-Tenant Architecture
@@ -486,8 +551,17 @@ class LLMProvider(ABC):
 | `/qa/pairs/{id}` | GET | Get single QA pair |
 | `/qa/pairs/{id}` | PUT | Update QA pair |
 | `/qa/pairs/{id}` | DELETE | Delete QA pair (soft) |
-| `/qa/import/text` | POST | Bulk import from text |
-| `/qa/import/csv` | POST | Bulk import from CSV |
+
+### QA Import API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/qa/import/csv` | POST | Upload CSV file for import |
+| `/qa/import/json` | POST | Upload JSON file for import |
+| `/qa/import/text` | POST | Upload text file for import |
+| `/qa/import/{id}/status` | GET | Get import job progress |
+| `/qa/import/history` | GET | List past import jobs |
+| `/qa/import/{id}/errors` | GET | Download error report (CSV) |
 
 ### Prompt Management API
 
