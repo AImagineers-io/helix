@@ -48,12 +48,12 @@ Helix is a RAG (Retrieval-Augmented Generation) chatbot platform built as a mono
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   ┌──────────┐     ┌──────────┐     ┌──────────────────────────────────┐   │
-│   │ Facebook │     │   Web    │     │          Admin UI                │   │
-│   │Messenger │     │  Widget  │     │  (QA Mgmt, Analytics, Prompts)   │   │
-│   └────┬─────┘     └────┬─────┘     └───────────────┬──────────────────┘   │
-│        │                │                           │                       │
-│        └────────────────┴───────────────────────────┘                       │
+│   ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌─────────────────┐   │
+│   │ Facebook │     │Embeddable│     │Standalone│     │    Admin UI     │   │
+│   │Messenger │     │  Widget  │     │  Widget  │     │(QA, Analytics)  │   │
+│   └────┬─────┘     └────┬─────┘     └────┬─────┘     └───────┬─────────┘   │
+│        │                │                │                   │             │
+│        └────────────────┴────────────────┴───────────────────┘             │
 │                                │                                            │
 │                                ▼                                            │
 │                    ┌───────────────────────┐                                │
@@ -207,7 +207,8 @@ The architecture is designed to scale to Kubernetes when needed, with each compo
 | Source | Method | Endpoint |
 |--------|--------|----------|
 | Facebook Messenger | Webhook | `/messenger/webhook` |
-| Web Widget | REST API | `/chat` |
+| Embeddable Widget | REST API | `/chat`, `/branding`, `/widget/config` |
+| Standalone Widget | REST API | `/widget/standalone`, `/chat` |
 | Admin UI | REST API | Various `/api/*` endpoints |
 | QA Import | REST API | `/qa/import/*` |
 
@@ -468,6 +469,14 @@ class LLMProvider(ABC):
 | `/chat` | POST | Send chat message |
 | `/health` | GET | Health check |
 
+### Widget API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/widget/config` | GET | Widget configuration (position, placeholder, enabled) |
+| `/widget/standalone` | GET | Full-page chat interface (HTML) |
+| `/branding` | GET | Branding config (existing, used by widget) |
+
 ### QA Management API
 
 | Endpoint | Method | Purpose |
@@ -606,6 +615,74 @@ class LLMProvider(ABC):
 - Each client has dedicated database (complete isolation)
 - Soft delete with retention policies
 - Conversation data retention: 30 days default
+
+---
+
+## Chat Widget Architecture
+
+### Overview
+
+The chat widget is a lightweight, embeddable JavaScript bundle that clients add to their websites with a single script tag. It provides the simplest integration path for end users.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Chat Widget System                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Client Website                    Helix Backend                 │
+│  ┌─────────────┐                  ┌─────────────┐               │
+│  │ <script>    │  ──── fetch ──▶  │ /branding   │               │
+│  │ widget.js   │                  │ /widget/cfg │               │
+│  └─────────────┘                  └─────────────┘               │
+│        │                                 │                       │
+│        ▼                                 │                       │
+│  ┌─────────────┐                         │                       │
+│  │ Chat Bubble │  ◀─── config ──────────┘                       │
+│  │   Window    │                                                 │
+│  │   Messages  │  ──── POST /chat ──▶  ChatOrchestrator         │
+│  └─────────────┘                                                 │
+│        │                                                         │
+│        ▼                                                         │
+│  ┌─────────────┐                                                 │
+│  │ localStorage│  (message persistence)                         │
+│  └─────────────┘                                                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Widget Components
+
+| Component | Responsibility |
+|-----------|----------------|
+| **ChatBubble** | Floating button to open/close chat |
+| **ChatWindow** | Expandable container with header and body |
+| **MessageList** | Scrollable message display |
+| **InputArea** | Text input with send button |
+| **TypingIndicator** | Loading state while waiting for response |
+
+### Widget Services
+
+| Service | Responsibility |
+|---------|----------------|
+| **BrandingService** | Fetch and apply branding from `/branding` |
+| **ChatClient** | Send messages to `/chat` API |
+| **DeviceManager** | Generate and persist device_id |
+| **PersistenceService** | Store conversation in localStorage |
+| **MessageState** | Manage conversation state and UI updates |
+
+### Deployment Modes
+
+| Mode | Use Case | URL |
+|------|----------|-----|
+| **Embedded** | Script tag on client website | `<script src="helix-api.../widget.js">` |
+| **Standalone** | QR codes, kiosks, direct links | `/widget/standalone` |
+
+### Bundle Requirements
+
+- Size: < 50KB gzipped
+- Dependencies: None (self-contained IIFE)
+- Scope: Isolated (no global pollution)
+- Styles: CSS-in-JS (no host page conflicts)
 
 ---
 
