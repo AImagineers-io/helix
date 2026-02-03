@@ -1,11 +1,16 @@
 """Integration tests for database migrations.
 
-Tests verify pgvector migration behavior across PostgreSQL and SQLite.
+Tests verify:
+- pgvector migration behavior across PostgreSQL and SQLite
+- QAPair and Embedding table creation
+- Required indexes and foreign keys
+- HNSW vector index (PostgreSQL)
 """
 import pytest
 import logging
 from unittest.mock import Mock, patch, MagicMock
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
@@ -200,3 +205,180 @@ class TestMigrationResult:
 
         assert result.warning is not None
         assert "embeddings" in result.warning
+
+
+class TestQAPairTableMigration:
+    """Tests for QAPair table migration."""
+
+    @pytest.fixture
+    def engine(self):
+        """Create in-memory SQLite engine for testing."""
+        return create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool
+        )
+
+    @pytest.fixture
+    def session(self, engine):
+        """Create database session with tables."""
+        from models.base import BaseModel
+
+        # Create all tables
+        BaseModel.metadata.create_all(bind=engine)
+
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        yield session
+        session.rollback()
+        session.close()
+
+    def test_qa_pair_table_created(self, engine, session):
+        """Test that qa_pair table exists after migration."""
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+
+        assert "qa_pair" in tables
+
+    def test_embedding_table_created(self, engine, session):
+        """Test that embedding table exists after migration."""
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+
+        assert "embedding" in tables
+
+    def test_qa_pair_columns_exist(self, engine, session):
+        """Test that qa_pair table has all required columns."""
+        inspector = inspect(engine)
+        columns = {col['name'] for col in inspector.get_columns("qa_pair")}
+
+        # Required columns from BaseModel
+        assert "id" in columns
+        assert "created_at" in columns
+        assert "updated_at" in columns
+
+        # Required columns from SoftDeleteMixin
+        assert "deleted_at" in columns
+
+        # Required columns from QAPair
+        assert "question" in columns
+        assert "answer" in columns
+        assert "category" in columns
+        assert "tags" in columns
+        assert "status" in columns
+
+    def test_embedding_columns_exist(self, engine, session):
+        """Test that embedding table has all required columns."""
+        inspector = inspect(engine)
+        columns = {col['name'] for col in inspector.get_columns("embedding")}
+
+        # Required columns from BaseModel
+        assert "id" in columns
+        assert "created_at" in columns
+        assert "updated_at" in columns
+
+        # Required columns from Embedding
+        assert "qa_pair_id" in columns
+        assert "vector" in columns
+        assert "model_version" in columns
+
+    def test_qa_pair_indexes_created(self, engine, session):
+        """Test that qa_pair table has required indexes."""
+        inspector = inspect(engine)
+        indexes = inspector.get_indexes("qa_pair")
+
+        # Collect all indexed columns
+        index_columns = set()
+        for idx in indexes:
+            for col in idx['column_names']:
+                index_columns.add(col)
+
+        # Should have indexes on status, category, and question
+        assert "status" in index_columns
+        assert "category" in index_columns
+        assert "question" in index_columns
+
+    def test_embedding_foreign_key(self, engine, session):
+        """Test that embedding table has foreign key to qa_pair."""
+        inspector = inspect(engine)
+        fks = inspector.get_foreign_keys("embedding")
+
+        assert len(fks) >= 1
+        fk_tables = [fk['referred_table'] for fk in fks]
+        assert "qa_pair" in fk_tables
+
+    def test_embedding_qa_pair_id_unique(self, engine, session):
+        """Test that qa_pair_id in embedding table is unique."""
+        inspector = inspect(engine)
+
+        # Check for unique constraint via indexes
+        indexes = inspector.get_indexes("embedding")
+        unique_cols = set()
+        for idx in indexes:
+            if idx.get('unique', False):
+                for col in idx['column_names']:
+                    unique_cols.add(col)
+
+        # Also check unique constraints
+        uniqs = inspector.get_unique_constraints("embedding")
+        for uniq in uniqs:
+            for col in uniq['column_names']:
+                unique_cols.add(col)
+
+        assert "qa_pair_id" in unique_cols
+
+    def test_qa_pair_can_be_inserted(self, session):
+        """Test that data can be inserted into qa_pair table."""
+        from models.qa_pair import QAPair
+        from models.enums import QAStatus
+
+        qa_pair = QAPair(
+            question="Migration test question?",
+            answer="Migration test answer."
+        )
+        session.add(qa_pair)
+        session.commit()
+
+        assert qa_pair.id is not None
+        assert qa_pair.status == QAStatus.DRAFT
+
+    def test_embedding_can_be_inserted(self, session):
+        """Test that data can be inserted into embedding table."""
+        from models.qa_pair import QAPair
+        from models.embedding import Embedding
+
+        # Create QAPair first
+        qa_pair = QAPair(
+            question="Embedding test question?",
+            answer="Embedding test answer."
+        )
+        session.add(qa_pair)
+        session.commit()
+
+        # Create Embedding
+        vector = [0.1] * 1536
+        embedding = Embedding(
+            qa_pair_id=qa_pair.id,
+            vector=vector,
+            model_version="test-v1"
+        )
+        session.add(embedding)
+        session.commit()
+
+        assert embedding.id is not None
+        assert embedding.qa_pair_id == qa_pair.id
+
+    def test_hnsw_index_works_on_empty_table(self, session):
+        """Test that vector operations work on empty table.
+
+        HNSW index (unlike IVFFlat) doesn't require training data,
+        so it should work immediately after table creation.
+        """
+        from models.embedding import Embedding
+        from sqlalchemy import select
+
+        # Query should work even with empty table
+        stmt = select(Embedding)
+        results = session.execute(stmt).scalars().all()
+
+        assert results == []

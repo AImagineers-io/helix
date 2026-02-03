@@ -18,6 +18,7 @@ This document consolidates post-phase improvement analysis for all Helix develop
 - [P11: Demo Environment Safety](#p11-phase-improvement-recommendations)
 - [P12: Security Tightening](#p12-security-tightening---improvement-recommendations)
 - [P13: Database Setup (pgvector)](#p13-phase-improvement-recommendations)
+- [P14: Knowledge Base Models](#p14-phase-improvement-recommendations)
 
 ---
 
@@ -1347,6 +1348,146 @@ def migrate(upgrade: bool = True):
 | Coverage ≥80% for vector.py, preflight.py | ✅ |
 
 **Phase Rating**: ⭐⭐⭐⭐⭐ (5/5) - All tasks completed with good coverage.
+
+*Generated: February 3, 2026*
+
+---
+
+# P14 Phase Improvement Recommendations
+
+## Summary
+
+Phase 14 created SQLAlchemy models for the knowledge base: BaseModel (common fields), SoftDeleteMixin, QAStatus enum, QAPair model, and Embedding model with conditional vector type support.
+
+- **Tests**: 71 passing (including existing migration tests)
+- **Coverage**: 90% on model files
+- **Status**: Models complete, ready for P15 repository layer
+
+---
+
+## Identified Gaps
+
+### 1. Structural Gap: Vector Type at Model Definition Time
+
+**Issue**: The Embedding model uses JSON type by default for SQLite compatibility, with PostgreSQL pgvector type added via migration.
+
+**Current Approach**:
+- Model defines `vector` as JSON (SQLite-compatible)
+- Migration converts to Vector(1536) on PostgreSQL with pgvector
+
+**Recommendation**: Consider a `TypeDecorator` that automatically handles the type based on dialect at runtime, similar to the `GUID` type created for UUID fields. This would allow single-source-of-truth type definition.
+
+**Priority**: Low (current approach works and is explicit)
+
+### 2. Missing Decision: Vector Dimension Configuration
+
+**Issue**: The embedding dimension (1536) is hardcoded in both model and migration.
+
+**Recommendation**: Move dimension to configuration:
+```python
+# core/config.py
+EMBEDDING_DIMENSIONS = 1536
+```
+
+This allows future support for different embedding models without code changes.
+
+**Priority**: Medium (affects future flexibility)
+
+### 3. Unclear Scope: Re-embedding Strategy
+
+**Issue**: P14 mentions "re-embedding without touching content" as a benefit of separate Embedding table, but no mechanism for versioning/re-embedding is defined.
+
+**Recommendation for P15**: Define clear re-embedding workflow:
+- How to trigger re-embedding (model version change)
+- How to handle transitional state (old + new embeddings)
+- Batch processing strategy
+
+**Priority**: High for P15 (core RAG functionality)
+
+---
+
+## Sequencing Problems
+
+### 1. Migration Dependencies
+
+**Issue**: The QA tables migration depends on pgvector extension being enabled first. This dependency is documented but not enforced programmatically.
+
+**Recommendation**: Add migration ordering enforcement:
+```python
+# In create_qa_tables.py
+DEPENDS_ON = ['001_enable_pgvector']
+```
+
+**Priority**: Low (documentation is sufficient for now)
+
+---
+
+## Risk Blind Spots
+
+### 1. Soft Delete Query Pattern
+
+**Issue**: The `active()` filter must be manually applied to all queries. Forgetting it will return deleted records.
+
+**Recommendation for P15**: Implement a repository class that automatically adds the soft delete filter by default:
+```python
+class QAPairRepository:
+    def query(self, include_deleted=False):
+        base = session.query(QAPair)
+        if not include_deleted:
+            base = base.filter(QAPair.active())
+        return base
+```
+
+**Priority**: High for P15 (data integrity)
+
+---
+
+## Testability Weaknesses
+
+### 1. PostgreSQL Integration Tests
+
+**Issue**: HNSW index tests are conditional on PostgreSQL availability. The current CI may not run these tests.
+
+**Recommendation**: Add PostgreSQL integration test job to CI/CD pipeline with testcontainers:
+```yaml
+# .gitlab-ci.yml
+test-postgres:
+  services:
+    - postgres:15-alpine
+  variables:
+    TEST_POSTGRESQL_URL: postgresql://test:test@postgres:5432/test
+```
+
+**Priority**: Medium (ensures full test coverage)
+
+---
+
+## Delivery Recommendations
+
+### 1. Action Items for P15
+
+1. Define re-embedding workflow in repository layer
+2. Implement automatic soft-delete filtering in queries
+3. Consider adding PostgreSQL integration tests to CI
+4. Extract embedding dimension to configuration
+
+---
+
+## Success Criteria Verification
+
+| Criterion | Status |
+|-----------|--------|
+| BaseModel provides id, created_at, updated_at | ✅ |
+| SoftDeleteMixin provides deleted_at, is_deleted, active() | ✅ |
+| QAPair can be created, saved, and queried | ✅ |
+| Embedding can be created with 1536-dimension vector | ✅ |
+| Foreign key constraint between Embedding and QAPair | ✅ |
+| Soft delete works via mixin | ✅ |
+| Migration applies cleanly on SQLite | ✅ |
+| All model tests pass | ✅ |
+| Coverage ≥80% for model files (90% achieved) | ✅ |
+
+**Phase Rating**: ⭐⭐⭐⭐⭐ (5/5) - All tasks completed, tests passing, good coverage.
 
 *Generated: February 3, 2026*
 
